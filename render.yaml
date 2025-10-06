@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: sensor-api-v2
+    name: digitaltwin-api
     env: docker
     dockerfilePath: ./Dockerfile.render
     plan: free
