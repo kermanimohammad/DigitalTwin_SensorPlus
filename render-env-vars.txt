@@ -1,0 +1,9 @@
+Environment Variables برای Render.com:
+
+BROKER = broker.hivemq.com
+PORT = 8883
+PREFIX = building/demo
+QOS = 0
+INTERVAL = 10
+MQTT_USER = (خالی)
+MQTT_PASS = (خالی)

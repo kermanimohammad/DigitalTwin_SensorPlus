@@ -14,24 +14,22 @@ COPY mqtt-test.html ./
 RUN pip install flask
 
 # ایجاد فایل وب سرور
-COPY <<EOF ./web_server.py
-from flask import Flask, send_file, jsonify
-import os
-
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return send_file('mqtt-test.html')
-
-@app.route('/health')
-def health():
-    return jsonify({"status": "healthy", "service": "mqtt-simulator"})
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
-EOF
+RUN echo 'from flask import Flask, send_file, jsonify\n\
+import os\n\
+\n\
+app = Flask(__name__)\n\
+\n\
+@app.route("/")\n\
+def index():\n\
+    return send_file("mqtt-test.html")\n\
+\n\
+@app.route("/health")\n\
+def health():\n\
+    return jsonify({"status": "healthy", "service": "mqtt-simulator"})\n\
+\n\
+if __name__ == "__main__":\n\
+    port = int(os.environ.get("PORT", 10000))\n\
+    app.run(host="0.0.0.0", port=port)' > web_server.py
 
 # متغیرهای محیطی
 ENV BROKER=broker.hivemq.com
@@ -43,13 +41,11 @@ ENV MQTT_USER=""
 ENV MQTT_PASS=""
 
 # اجرای همزمان وب سرور و شبیه‌ساز
-COPY <<EOF ./start.sh
-#!/bin/bash
-# اجرای وب سرور در پس‌زمینه
-python web_server.py &
-# اجرای شبیه‌ساز MQTT
-python mqtt_simulator.py
-EOF
+RUN echo '#!/bin/bash\n\
+# اجرای وب سرور در پس‌زمینه\n\
+python web_server.py &\n\
+# اجرای شبیه‌ساز MQTT\n\
+python mqtt_simulator.py' > start.sh
 
 RUN chmod +x start.sh
 
