@@ -1,24 +1,11 @@
 services:
   - type: web
-    name: mqtt-simulator
-    env: docker
-    dockerfilePath: ./Dockerfile.render
+    name: sensor-api
+    env: python
+    buildCommand: pip install -r render_requirements.txt
+    startCommand: gunicorn render_api:app
     plan: free
     envVars:
-      - key: BROKER
-        value: broker.hivemq.com  # MQTT broker رایگان
       - key: PORT
-        value: 8883  # MQTT over SSL
-      - key: PREFIX
-        value: building/demo
-      - key: QOS
-        value: 0
-      - key: INTERVAL
-        value: 10
-      - key: MQTT_USER
-        value: ""  # بدون احراز هویت برای broker رایگان
-      - key: MQTT_PASS
-        value: ""
-      - key: PORT
-        value: 10000  # پورت داخلی Render
-    healthCheckPath: /health
+        value: 10000
+    healthCheckPath: /api/health
