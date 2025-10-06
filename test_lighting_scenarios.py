@@ -232,7 +232,7 @@ def generate_lighting_report():
         print(line)
 
 if __name__ == "__main__":
-    print("🚀 شروع تست سناریوهای روشنایی هوشمند")
+    print("شروع تست سناریوهای روشنایی هوشمند")
     print()
     
     try:
@@ -243,10 +243,10 @@ if __name__ == "__main__":
         generate_lighting_report()
         
         print("=" * 80)
-        print("✅ تمام تست‌ها با موفقیت انجام شد!")
+        print("تمام تست‌ها با موفقیت انجام شد!")
         print("=" * 80)
         
     except Exception as e:
-        print(f"❌ خطا در اجرای تست‌ها: {e}")
+        print(f"خطا در اجرای تست‌ها: {e}")
         import traceback
         traceback.print_exc()
