@@ -34,7 +34,7 @@ def home():
     """Home page with API documentation"""
     return """
     <!DOCTYPE html>
-    <html lang="fa" dir="rtl">
+    <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,70 +55,70 @@ def home():
     <body>
         <div class="container">
             <h1>🌡️ Sensor Data API</h1>
-            <p style="text-align: center; color: #666;">API برای دریافت اطلاعات سنسورها از دیتابیس</p>
+            <p style="text-align: center; color: #666;">API for retrieving sensor data from database</p>
             
             <div class="endpoint">
-                <h3>📊 آمار کلی</h3>
+                <h3>📊 Statistics</h3>
                 <a href="/api/stats" target="_blank">GET /api/stats</a>
-                <div class="description">نمایش آمار کلی تمام سنسورها</div>
-                <button class="test-btn" onclick="testEndpoint('/api/stats')">تست</button>
+                <div class="description">Display overall statistics for all sensors</div>
+                <button class="test-btn" onclick="testEndpoint('/api/stats')">Test</button>
             </div>
             
             <div class="endpoint">
-                <h3>🌡️ داده‌های دما</h3>
+                <h3>🌡️ Temperature Data</h3>
                 <a href="/api/temperature" target="_blank">GET /api/temperature</a>
-                <div class="description">دریافت آخرین داده‌های دما</div>
-                <button class="test-btn" onclick="testEndpoint('/api/temperature')">تست</button>
+                <div class="description">Get latest temperature data</div>
+                <button class="test-btn" onclick="testEndpoint('/api/temperature')">Test</button>
             </div>
             
             <div class="endpoint">
-                <h3>💧 داده‌های رطوبت</h3>
+                <h3>💧 Humidity Data</h3>
                 <a href="/api/humidity" target="_blank">GET /api/humidity</a>
-                <div class="description">دریافت آخرین داده‌های رطوبت</div>
-                <button class="test-btn" onclick="testEndpoint('/api/humidity')">تست</button>
+                <div class="description">Get latest humidity data</div>
+                <button class="test-btn" onclick="testEndpoint('/api/humidity')">Test</button>
             </div>
             
             <div class="endpoint">
-                <h3>🌬️ داده‌های CO2</h3>
+                <h3>🌬️ CO2 Data</h3>
                 <a href="/api/co2" target="_blank">GET /api/co2</a>
-                <div class="description">دریافت آخرین داده‌های CO2</div>
-                <button class="test-btn" onclick="testEndpoint('/api/co2')">تست</button>
+                <div class="description">Get latest CO2 data</div>
+                <button class="test-btn" onclick="testEndpoint('/api/co2')">Test</button>
             </div>
             
             <div class="endpoint">
-                <h3>💡 داده‌های نور</h3>
+                <h3>💡 Light Data</h3>
                 <a href="/api/light" target="_blank">GET /api/light</a>
-                <div class="description">دریافت آخرین داده‌های نور</div>
-                <button class="test-btn" onclick="testEndpoint('/api/light')">تست</button>
+                <div class="description">Get latest light data</div>
+                <button class="test-btn" onclick="testEndpoint('/api/light')">Test</button>
             </div>
             
             <div class="endpoint">
-                <h3>☀️ داده‌های خورشیدی</h3>
+                <h3>☀️ Solar Data</h3>
                 <a href="/api/solar" target="_blank">GET /api/solar</a>
-                <div class="description">دریافت آخرین داده‌های خورشیدی</div>
-                <button class="test-btn" onclick="testEndpoint('/api/solar')">تست</button>
+                <div class="description">Get latest solar data</div>
+                <button class="test-btn" onclick="testEndpoint('/api/solar')">Test</button>
             </div>
             
             <div class="endpoint">
-                <h3>🏠 داده‌های اتاق</h3>
+                <h3>🏠 Room Data</h3>
                 <a href="/api/room/room1" target="_blank">GET /api/room/room1</a>
-                <div class="description">دریافت تمام داده‌های یک اتاق</div>
-                <button class="test-btn" onclick="testEndpoint('/api/room/room1')">تست</button>
+                <div class="description">Get all data for a specific room</div>
+                <button class="test-btn" onclick="testEndpoint('/api/room/room1')">Test</button>
             </div>
             
             <div class="endpoint">
-                <h3>❤️ وضعیت سیستم</h3>
+                <h3>❤️ System Health</h3>
                 <a href="/api/health" target="_blank">GET /api/health</a>
-                <div class="description">بررسی وضعیت اتصال به دیتابیس</div>
-                <button class="test-btn" onclick="testEndpoint('/api/health')">تست</button>
+                <div class="description">Check database connection status</div>
+                <button class="test-btn" onclick="testEndpoint('/api/health')">Test</button>
             </div>
             
             <div style="margin-top: 30px; padding: 15px; background: #e9ecef; border-radius: 5px;">
-                <h4>📝 نحوه استفاده:</h4>
+                <h4>📝 Usage:</h4>
                 <ul>
-                    <li>روی هر لینک کلیک کنید تا JSON response را ببینید</li>
-                    <li>از دکمه "تست" برای نمایش نتیجه در همین صفحه استفاده کنید</li>
-                    <li>می‌توانید از پارامتر <code>?limit=10</code> برای محدود کردن تعداد رکوردها استفاده کنید</li>
+                    <li>Click on any link to see JSON response</li>
+                    <li>Use "Test" button to display result on this page</li>
+                    <li>You can use <code>?limit=10</code> parameter to limit number of records</li>
                 </ul>
             </div>
         </div>
@@ -128,10 +128,10 @@ def home():
                 fetch(endpoint)
                     .then(response => response.json())
                     .then(data => {
-                        alert('نتیجه: ' + JSON.stringify(data, null, 2));
+                        alert('Result: ' + JSON.stringify(data, null, 2));
                     })
                     .catch(error => {
-                        alert('خطا: ' + error.message);
+                        alert('Error: ' + error.message);
                     });
             }
         </script>
