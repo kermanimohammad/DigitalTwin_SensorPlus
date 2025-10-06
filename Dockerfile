@@ -1,8 +1,19 @@
 FROM python:3.11-slim
+
 WORKDIR /app
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
-COPY mqtt_simulator.py ./
-ENV BROKER=broker PORT=1883 PREFIX=building/demo QOS=0 INTERVAL=10 DURATION=
-ENV MQTT_USER=demo_user MQTT_PASS=demo_pass
-CMD python mqtt_simulator.py --broker ${BROKER} --port ${PORT} --prefix ${PREFIX} --qos ${QOS} --interval ${INTERVAL} ${DURATION:+--duration ${DURATION}}
+
+# Copy requirements and install dependencies
+COPY render_requirements.txt ./
+RUN pip install --upgrade pip && pip install -r render_requirements.txt
+
+# Copy the API file
+COPY render_api.py ./
+
+# Expose port
+EXPOSE 10000
+
+# Set environment variables
+ENV PORT=10000
+
+# Run the application
+CMD ["gunicorn", "render_api:app", "--bind", "0.0.0.0:10000"]
