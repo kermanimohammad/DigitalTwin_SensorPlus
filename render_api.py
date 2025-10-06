@@ -31,14 +31,167 @@ def get_db_connection():
 
 @app.route('/')
 def home():
-    """Home page with API documentation"""
+    """Real-time sensor data dashboard"""
     return """
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Sensor Data API</title>
+        <title>DigitalTwin Sensor Dashboard</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+            .container { max-width: 1200px; margin: 0 auto; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .header h1 { color: #333; margin: 0; }
+            .header p { color: #666; margin: 10px 0; }
+            .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+            .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+            .stat-card h3 { margin: 0 0 10px 0; color: #007bff; }
+            .stat-value { font-size: 2em; font-weight: bold; color: #28a745; margin: 10px 0; }
+            .rooms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+            .room-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .room-card h3 { margin: 0 0 15px 0; color: #333; }
+            .sensor-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+            .sensor-item:last-child { border-bottom: none; }
+            .sensor-name { font-weight: bold; }
+            .sensor-value { color: #28a745; }
+            .loading { text-align: center; color: #666; }
+            .error { color: #dc3545; text-align: center; }
+            .refresh-btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px; }
+            .refresh-btn:hover { background: #0056b3; }
+            .api-link { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 10px 15px; border-radius: 5px; text-decoration: none; }
+            .api-link:hover { background: #218838; }
+        </style>
+    </head>
+    <body>
+        <a href="/api/docs" class="api-link">📚 API Documentation</a>
+        
+        <div class="container">
+            <div class="header">
+                <h1>🌡️ DigitalTwin Sensor Dashboard</h1>
+                <p>Real-time sensor data monitoring</p>
+                <button class="refresh-btn" onclick="loadData()">🔄 Refresh Data</button>
+            </div>
+            
+            <div class="stats-grid" id="statsGrid">
+                <div class="loading">Loading statistics...</div>
+            </div>
+            
+            <div class="rooms-grid" id="roomsGrid">
+                <div class="loading">Loading room data...</div>
+            </div>
+        </div>
+        
+        <script>
+            async function loadData() {
+                try {
+                    // Load statistics
+                    const statsResponse = await fetch('/api/stats');
+                    const statsData = await statsResponse.json();
+                    
+                    if (statsData.success) {
+                        document.getElementById('statsGrid').innerHTML = `
+                            <div class="stat-card">
+                                <h3>📊 Total Records</h3>
+                                <div class="stat-value">${statsData.stats.total_records}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>🌡️ Temperature</h3>
+                                <div class="stat-value">${statsData.stats.sensor_counts.temperature || 0}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>💧 Humidity</h3>
+                                <div class="stat-value">${statsData.stats.sensor_counts.humidity || 0}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>🌬️ CO2</h3>
+                                <div class="stat-value">${statsData.stats.sensor_counts.co2 || 0}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>💡 Light</h3>
+                                <div class="stat-value">${statsData.stats.sensor_counts.light || 0}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h3>☀️ Solar</h3>
+                                <div class="stat-value">${statsData.stats.sensor_counts.solar || 0}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Load rooms data
+                    const roomsResponse = await fetch('/api/rooms');
+                    const roomsData = await roomsResponse.json();
+                    
+                    if (roomsData.success) {
+                        let roomsHtml = '';
+                        roomsData.rooms.forEach(room => {
+                            let sensorsHtml = '';
+                            Object.keys(room.sensors).forEach(sensorType => {
+                                const sensor = room.sensors[sensorType];
+                                let value = '';
+                                switch(sensorType) {
+                                    case 'temperature':
+                                        value = `${sensor.temperature_c}°C`;
+                                        break;
+                                    case 'humidity':
+                                        value = `${sensor.humidity_percent}%`;
+                                        break;
+                                    case 'co2':
+                                        value = `${sensor.co2_ppm} ppm`;
+                                        break;
+                                    case 'light':
+                                        value = sensor.is_on ? `ON (${sensor.power_watts}W)` : 'OFF';
+                                        break;
+                                    case 'solar':
+                                        value = `${sensor.power_watts}W`;
+                                        break;
+                                }
+                                sensorsHtml += `
+                                    <div class="sensor-item">
+                                        <span class="sensor-name">${sensorType.toUpperCase()}</span>
+                                        <span class="sensor-value">${value}</span>
+                                    </div>
+                                `;
+                            });
+                            
+                            roomsHtml += `
+                                <div class="room-card">
+                                    <h3>🏠 ${room.room_id}</h3>
+                                    ${sensorsHtml}
+                                </div>
+                            `;
+                        });
+                        
+                        document.getElementById('roomsGrid').innerHTML = roomsHtml || '<div class="error">No room data available</div>';
+                    }
+                    
+                } catch (error) {
+                    document.getElementById('statsGrid').innerHTML = '<div class="error">Error loading data: ' + error.message + '</div>';
+                    document.getElementById('roomsGrid').innerHTML = '<div class="error">Error loading data: ' + error.message + '</div>';
+                }
+            }
+            
+            // Load data on page load
+            loadData();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(loadData, 30000);
+        </script>
+    </body>
+    </html>
+    """
+
+@app.route('/api/docs')
+def api_docs():
+    """API documentation page"""
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Sensor Data API Documentation</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
             .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -50,11 +203,15 @@ def home():
             .description { color: #666; margin: 5px 0; }
             .test-btn { background: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
             .test-btn:hover { background: #218838; }
+            .dashboard-link { position: fixed; top: 20px; right: 20px; background: #007bff; color: white; padding: 10px 15px; border-radius: 5px; text-decoration: none; }
+            .dashboard-link:hover { background: #0056b3; }
         </style>
     </head>
     <body>
+        <a href="/" class="dashboard-link">📊 Dashboard</a>
+        
         <div class="container">
-            <h1>🌡️ Sensor Data API</h1>
+            <h1>🌡️ Sensor Data API Documentation</h1>
             <p style="text-align: center; color: #666;">API for retrieving sensor data from database</p>
             
             <div class="endpoint">
