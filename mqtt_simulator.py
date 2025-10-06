@@ -77,7 +77,7 @@ class MQTTSim:
 
 if __name__=="__main__":
     # اولویت با ENV برای داکر؛ CLI هم پشتیبانی می‌شود
-    broker = os.getenv("BROKER", "broker")
+    broker = os.getenv("BROKER", "test.mosquitto.org")
     port   = int(os.getenv("PORT", "1883"))
     prefix = os.getenv("PREFIX", "building/demo")
     qos    = int(os.getenv("QOS", "0"))
