@@ -5,6 +5,7 @@ WORKDIR /app
 # نصب dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install supervisor
 
 # کپی فایل‌های پروژه
 COPY mqtt_simulator.py ./
@@ -40,15 +41,31 @@ ENV INTERVAL=10
 ENV MQTT_USER=""
 ENV MQTT_PASS=""
 
-# اجرای همزمان وب سرور و شبیه‌ساز
-RUN echo '#!/bin/bash\n\
-# اجرای وب سرور در پس‌زمینه\n\
-python web_server.py &\n\
-# اجرای شبیه‌ساز MQTT\n\
-python mqtt_simulator.py' > start.sh
-
-RUN chmod +x start.sh
+# ایجاد فایل پیکربندی supervisor
+RUN echo '[supervisord]\n\
+nodaemon=true\n\
+user=root\n\
+\n\
+[program:web_server]\n\
+command=python web_server.py\n\
+directory=/app\n\
+autostart=true\n\
+autorestart=true\n\
+stdout_logfile=/dev/stdout\n\
+stdout_logfile_maxbytes=0\n\
+stderr_logfile=/dev/stderr\n\
+stderr_logfile_maxbytes=0\n\
+\n\
+[program:mqtt_simulator]\n\
+command=python mqtt_simulator.py\n\
+directory=/app\n\
+autostart=true\n\
+autorestart=true\n\
+stdout_logfile=/dev/stdout\n\
+stdout_logfile_maxbytes=0\n\
+stderr_logfile=/dev/stderr\n\
+stderr_logfile_maxbytes=0' > supervisord.conf
 
 EXPOSE 10000
 
-CMD ["./start.sh"]
+CMD ["supervisord", "-c", "supervisord.conf"]
