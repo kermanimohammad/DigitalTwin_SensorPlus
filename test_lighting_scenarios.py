@@ -21,7 +21,7 @@ def test_lighting_scenarios():
     controller = LightingController()
     
     print("=" * 80)
-    print("تست سناریوهای روشنایی هوشمند")
+    print("Enhanced Lighting Scenarios Test")
     print("=" * 80)
     
     # تست در زمان‌های مختلف روز
@@ -65,7 +65,7 @@ def test_lighting_scenarios():
                 results.append((light_on, occupancy))
             
             # نمایش نتایج
-            light_status = "🔆 روشن" if any(r[0] for r in results) else "🌙 خاموش"
+            light_status = "روشن" if any(r[0] for r in results) else "خاموش"
             avg_occupancy = sum(r[1] for r in results) / len(results)
             
             print(f"  {persian_name:12} | {light_status:8} | حضور: {avg_occupancy:.2f}")
@@ -92,7 +92,7 @@ def test_seasonal_variations():
     test_time = datetime.now().replace(hour=18, minute=0, second=0)  # غروب
     
     for season, persian_name in seasons:
-        print(f"🌍 فصل: {persian_name}")
+        print(f"فصل: {persian_name}")
         print("-" * 30)
         
         # تغییر فصول در کنترلر (برای تست)
@@ -107,7 +107,7 @@ def test_seasonal_variations():
             light_on, occupancy = controller.should_light_be_on(
                 room_type, test_time, "test_room", 0.0
             )
-            status = "🔆 روشن" if light_on else "🌙 خاموش"
+            status = "روشن" if light_on else "خاموش"
             print(f"  {persian_room:12} | {status}")
         
         print()
@@ -131,7 +131,7 @@ def test_holiday_scenarios():
     test_time = datetime.now().replace(hour=10, minute=0, second=0)  # صبح
     
     for test_date in test_dates:
-        print(f"📅 تاریخ: {test_date.strftime('%Y-%m-%d %A')}")
+        print(f"تاریخ: {test_date.strftime('%Y-%m-%d %A')}")
         print(f"تعطیل: {'بله' if controller.is_holiday(test_date) else 'خیر'}")
         print(f"آخر هفته: {'بله' if controller.is_weekend(test_date) else 'خیر'}")
         print("-" * 40)
@@ -144,7 +144,7 @@ def test_holiday_scenarios():
             light_on, occupancy = controller.should_light_be_on(
                 room_type, test_time, "test_room", 0.0
             )
-            status = "🔆 روشن" if light_on else "🌙 خاموش"
+            status = "روشن" if light_on else "خاموش"
             print(f"  {persian_name:12} | {status:8} | حضور: {occupancy:.2f}")
         
         print()
@@ -163,7 +163,7 @@ def test_room_specific_patterns():
     
     for hour in hours_to_test:
         test_time = datetime.now().replace(hour=hour, minute=0, second=0)
-        print(f"⏰ ساعت {hour:02d}:00")
+        print(f"ساعت {hour:02d}:00")
         print("-" * 30)
         
         for room_type, persian_name in [
@@ -182,7 +182,7 @@ def test_room_specific_patterns():
                 light_results.append(light_on)
             
             light_probability = sum(light_results) / len(light_results)
-            status = "🔆" if light_probability > 0.5 else "🌙"
+            status = "ON" if light_probability > 0.5 else "OFF"
             
             print(f"  {persian_name:12} | {status} احتمال: {light_probability:.2f}")
         
@@ -226,13 +226,13 @@ def generate_lighting_report():
         
         for room_type in [RoomType.BEDROOM, RoomType.LIVING_ROOM, RoomType.KITCHEN, 
                          RoomType.OFFICE, RoomType.BATHROOM]:
-            status = "🔆" if hour_data[room_type]["light_on"] else "🌙"
+            status = "ON" if hour_data[room_type]["light_on"] else "OFF"
             line += f"    {status}    |"
         
         print(line)
 
 if __name__ == "__main__":
-    print("شروع تست سناریوهای روشنایی هوشمند")
+    print("Starting Enhanced Lighting Scenarios Test")
     print()
     
     try:
@@ -243,10 +243,10 @@ if __name__ == "__main__":
         generate_lighting_report()
         
         print("=" * 80)
-        print("تمام تست‌ها با موفقیت انجام شد!")
+        print("All tests completed successfully!")
         print("=" * 80)
         
     except Exception as e:
-        print(f"خطا در اجرای تست‌ها: {e}")
+        print(f"Error in test execution: {e}")
         import traceback
         traceback.print_exc()
