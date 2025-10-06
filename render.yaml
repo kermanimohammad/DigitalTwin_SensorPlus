@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: sensor-api
+    name: sensor-api-v2
     env: docker
     dockerfilePath: ./Dockerfile.render
     plan: free
