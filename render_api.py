@@ -100,7 +100,14 @@ def home():
             </div>
             
             <div class="endpoint">
-                <h3>🏠 Room Data</h3>
+                <h3>🏠 All Rooms Data</h3>
+                <a href="/api/rooms" target="_blank">GET /api/rooms</a>
+                <div class="description">Get all rooms with their sensor data</div>
+                <button class="test-btn" onclick="testEndpoint('/api/rooms')">Test</button>
+            </div>
+            
+            <div class="endpoint">
+                <h3>🏠 Specific Room Data</h3>
                 <a href="/api/room/room1" target="_blank">GET /api/room/room1</a>
                 <div class="description">Get all data for a specific room</div>
                 <button class="test-btn" onclick="testEndpoint('/api/room/room1')">Test</button>
@@ -203,6 +210,93 @@ def get_light():
 def get_solar():
     """Get solar data"""
     return get_sensor_data('solar_data', 'power_watts,voltage_volts,current_amps', 'solar')
+
+@app.route('/api/rooms')
+def get_all_rooms():
+    """Get all rooms with their sensor data"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor()
+        
+        # Get all unique rooms
+        cursor.execute("SELECT DISTINCT room_id FROM temperature_data UNION SELECT DISTINCT room_id FROM humidity_data UNION SELECT DISTINCT room_id FROM co2_data UNION SELECT DISTINCT room_id FROM light_data UNION SELECT DISTINCT room_id FROM solar_data WHERE room_id IS NOT NULL")
+        rooms = [row[0] for row in cursor.fetchall()]
+        
+        rooms_data = []
+        
+        for room_id in rooms:
+            room_data = {'room_id': room_id, 'sensors': {}}
+            
+            # Temperature
+            cursor.execute("SELECT device_id, temperature_c, timestamp FROM temperature_data WHERE room_id = %s ORDER BY timestamp DESC LIMIT 1", (room_id,))
+            temp_data = cursor.fetchone()
+            if temp_data:
+                room_data['sensors']['temperature'] = {
+                    'device_id': temp_data[0],
+                    'temperature_c': temp_data[1],
+                    'timestamp': temp_data[2].isoformat()
+                }
+            
+            # Humidity
+            cursor.execute("SELECT device_id, humidity_percent, timestamp FROM humidity_data WHERE room_id = %s ORDER BY timestamp DESC LIMIT 1", (room_id,))
+            hum_data = cursor.fetchone()
+            if hum_data:
+                room_data['sensors']['humidity'] = {
+                    'device_id': hum_data[0],
+                    'humidity_percent': hum_data[1],
+                    'timestamp': hum_data[2].isoformat()
+                }
+            
+            # CO2
+            cursor.execute("SELECT device_id, co2_ppm, timestamp FROM co2_data WHERE room_id = %s ORDER BY timestamp DESC LIMIT 1", (room_id,))
+            co2_data = cursor.fetchone()
+            if co2_data:
+                room_data['sensors']['co2'] = {
+                    'device_id': co2_data[0],
+                    'co2_ppm': co2_data[1],
+                    'timestamp': co2_data[2].isoformat()
+                }
+            
+            # Light
+            cursor.execute("SELECT device_id, is_on, power_watts, timestamp FROM light_data WHERE room_id = %s ORDER BY timestamp DESC LIMIT 1", (room_id,))
+            light_data = cursor.fetchone()
+            if light_data:
+                room_data['sensors']['light'] = {
+                    'device_id': light_data[0],
+                    'is_on': bool(light_data[1]),
+                    'power_watts': light_data[2],
+                    'timestamp': light_data[3].isoformat()
+                }
+            
+            # Solar
+            cursor.execute("SELECT device_id, power_watts, voltage_volts, current_amps, timestamp FROM solar_data WHERE room_id = %s ORDER BY timestamp DESC LIMIT 1", (room_id,))
+            solar_data = cursor.fetchone()
+            if solar_data:
+                room_data['sensors']['solar'] = {
+                    'device_id': solar_data[0],
+                    'power_watts': solar_data[1],
+                    'voltage_volts': solar_data[2],
+                    'current_amps': solar_data[3],
+                    'timestamp': solar_data[4].isoformat()
+                }
+            
+            rooms_data.append(room_data)
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'success': True,
+            'total_rooms': len(rooms_data),
+            'rooms': rooms_data,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/room/<room_id>')
 def get_room_data(room_id):
