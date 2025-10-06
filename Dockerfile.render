@@ -5,7 +5,6 @@ WORKDIR /app
 # نصب dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install supervisor
 
 # کپی فایل‌های پروژه
 COPY mqtt_simulator.py ./
@@ -41,31 +40,38 @@ ENV INTERVAL=10
 ENV MQTT_USER=""
 ENV MQTT_PASS=""
 
-# ایجاد فایل پیکربندی supervisor
-RUN echo '[supervisord]\n\
-nodaemon=true\n\
-user=root\n\
+# ایجاد اسکریپت شروع بهبود یافته
+RUN echo '#!/bin/bash\n\
+set -e\n\
 \n\
-[program:web_server]\n\
-command=python web_server.py\n\
-directory=/app\n\
-autostart=true\n\
-autorestart=true\n\
-stdout_logfile=/dev/stdout\n\
-stdout_logfile_maxbytes=0\n\
-stderr_logfile=/dev/stderr\n\
-stderr_logfile_maxbytes=0\n\
+# اجرای وب سرور در پس‌زمینه\n\
+echo "Starting Flask web server..."\n\
+python web_server.py &\n\
+WEB_PID=$!\n\
 \n\
-[program:mqtt_simulator]\n\
-command=python mqtt_simulator.py\n\
-directory=/app\n\
-autostart=true\n\
-autorestart=true\n\
-stdout_logfile=/dev/stdout\n\
-stdout_logfile_maxbytes=0\n\
-stderr_logfile=/dev/stderr\n\
-stderr_logfile_maxbytes=0' > supervisord.conf
+# صبر برای شروع وب سرور\n\
+sleep 3\n\
+\n\
+# اجرای شبیه‌ساز MQTT\n\
+echo "Starting MQTT simulator..."\n\
+python mqtt_simulator.py &\n\
+MQTT_PID=$!\n\
+\n\
+# تابع cleanup\n\
+cleanup() {\n\
+    echo "Shutting down services..."\n\
+    kill $WEB_PID $MQTT_PID 2>/dev/null || true\n\
+    exit 0\n\
+}\n\
+\n\
+# تنظیم trap برای cleanup\n\
+trap cleanup SIGTERM SIGINT\n\
+\n\
+# انتظار برای هر دو process\n\
+wait $WEB_PID $MQTT_PID' > start.sh
+
+RUN chmod +x start.sh
 
 EXPOSE 10000
 
-CMD ["supervisord", "-c", "supervisord.conf"]
+CMD ["./start.sh"]
