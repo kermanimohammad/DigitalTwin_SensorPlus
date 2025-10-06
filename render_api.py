@@ -131,6 +131,7 @@ def dashboard():
             .stat-card h3 { margin: 0 0 10px 0; color: #007bff; }
             .stat-value { font-size: 2em; font-weight: bold; color: #28a745; margin: 10px 0; }
             .rooms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+            .solar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
             .room-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
             .room-card h3 { margin: 0 0 15px 0; color: #333; display: flex; justify-content: space-between; align-items: center; }
             .room-id { background: #007bff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
@@ -170,6 +171,13 @@ def dashboard():
             
             <div class="rooms-grid" id="roomsGrid">
                 <div class="loading">Loading room data...</div>
+            </div>
+            
+            <div class="solar-section" id="solarSection" style="margin-top: 30px;">
+                <h2 style="text-align: center; color: #333; margin-bottom: 20px;">☀️ Solar Panels</h2>
+                <div class="solar-grid" id="solarGrid">
+                    <div class="loading">Loading solar panel data...</div>
+                </div>
             </div>
         </div>
         
@@ -270,11 +278,48 @@ def dashboard():
                         });
                         
                         document.getElementById('roomsGrid').innerHTML = roomsHtml || '<div class="error">No room data available</div>';
+                        
+                        // Display solar panels
+                        if (roomsData.solar_panels && roomsData.solar_panels.length > 0) {
+                            let solarHtml = '';
+                            roomsData.solar_panels.forEach(panel => {
+                                solarHtml += `
+                                    <div class="room-card">
+                                        <h3>
+                                            ☀️ Solar Panel
+                                            <span class="room-id">ID: ${panel.device_id}</span>
+                                        </h3>
+                                        <div class="sensor-item">
+                                            <div class="sensor-info">
+                                                <span class="sensor-name">POWER</span>
+                                            </div>
+                                            <span class="sensor-value">${panel.power_watts}W</span>
+                                        </div>
+                                        <div class="sensor-item">
+                                            <div class="sensor-info">
+                                                <span class="sensor-name">VOLTAGE</span>
+                                            </div>
+                                            <span class="sensor-value">${panel.voltage_volts}V</span>
+                                        </div>
+                                        <div class="sensor-item">
+                                            <div class="sensor-info">
+                                                <span class="sensor-name">CURRENT</span>
+                                            </div>
+                                            <span class="sensor-value">${panel.current_amps}A</span>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            document.getElementById('solarGrid').innerHTML = solarHtml;
+                        } else {
+                            document.getElementById('solarGrid').innerHTML = '<div class="error">No solar panel data available</div>';
+                        }
                     }
                     
                 } catch (error) {
                     document.getElementById('statsGrid').innerHTML = '<div class="error">Error loading data: ' + error.message + '</div>';
                     document.getElementById('roomsGrid').innerHTML = '<div class="error">Error loading data: ' + error.message + '</div>';
+                    document.getElementById('solarGrid').innerHTML = '<div class="error">Error loading data: ' + error.message + '</div>';
                 }
             }
             
@@ -357,7 +402,7 @@ def api_docs():
             
             <div class="endpoint">
                 <h3>☀️ Solar Data</h3>
-                <a href="/api/solar" target="_blank">GET /api/solar</a>
+                <a href="/api/solar" target="_blank">GET /api/solar</a> - Get all solar panels data (separate from rooms)
                 <div class="description">Get latest solar data</div>
                 <button class="test-btn" onclick="testEndpoint('/api/solar')">Test</button>
             </div>
@@ -471,8 +516,56 @@ def get_light():
 
 @app.route('/api/solar')
 def get_solar():
-    """Get solar data"""
-    return get_sensor_data('solar_data', 'power_watts,voltage_volts,current_amps', 'solar')
+    """Get all solar panels data"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+        
+        cursor = connection.cursor()
+        
+        # Get all unique solar panel devices
+        cursor.execute("SELECT DISTINCT device_id FROM solar_data ORDER BY device_id")
+        solar_devices = [row[0] for row in cursor.fetchall()]
+        
+        # Get limit parameter
+        limit = request.args.get('limit', 10, type=int)
+        
+        solar_panels = []
+        for device_id in solar_devices:
+            cursor.execute("SELECT device_id, power_watts, voltage_volts, current_amps, timestamp FROM solar_data WHERE device_id = %s ORDER BY timestamp DESC LIMIT %s", (device_id, limit))
+            records = cursor.fetchall()
+            
+            panel_data = []
+            for record in records:
+                panel_data.append({
+                    'device_id': record[0],
+                    'power_watts': record[1],
+                    'voltage_volts': record[2],
+                    'current_amps': record[3],
+                    'timestamp': record[4].isoformat()
+                })
+            
+            if panel_data:
+                solar_panels.append({
+                    'device_id': device_id,
+                    'latest_data': panel_data[0],
+                    'all_data': panel_data
+                })
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'success': True,
+            'sensor_type': 'solar',
+            'total_panels': len(solar_panels),
+            'panels': solar_panels,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/rooms')
 def get_all_rooms():
@@ -534,27 +627,36 @@ def get_all_rooms():
                     'timestamp': light_data[3].isoformat()
                 }
             
-            # Solar (solar_data doesn't have room_id column, so we'll get latest solar data)
-            cursor.execute("SELECT device_id, power_watts, voltage_volts, current_amps, timestamp FROM solar_data ORDER BY timestamp DESC LIMIT 1")
-            solar_data = cursor.fetchone()
-            if solar_data:
-                room_data['sensors']['solar'] = {
-                    'device_id': solar_data[0],
-                    'power_watts': solar_data[1],
-                    'voltage_volts': solar_data[2],
-                    'current_amps': solar_data[3],
-                    'timestamp': solar_data[4].isoformat()
-                }
+            # Solar data is not room-specific, so we don't include it in room data
             
             rooms_data.append(room_data)
         
         cursor.close()
         connection.close()
         
+        # Get all solar panels (separate from rooms)
+        cursor.execute("SELECT DISTINCT device_id FROM solar_data ORDER BY device_id")
+        solar_devices = [row[0] for row in cursor.fetchall()]
+        
+        solar_panels = []
+        for device_id in solar_devices:
+            cursor.execute("SELECT device_id, power_watts, voltage_volts, current_amps, timestamp FROM solar_data WHERE device_id = %s ORDER BY timestamp DESC LIMIT 1", (device_id,))
+            solar_data = cursor.fetchone()
+            if solar_data:
+                solar_panels.append({
+                    'device_id': solar_data[0],
+                    'power_watts': solar_data[1],
+                    'voltage_volts': solar_data[2],
+                    'current_amps': solar_data[3],
+                    'timestamp': solar_data[4].isoformat()
+                })
+        
         return jsonify({
             'success': True,
             'total_rooms': len(rooms_data),
             'rooms': rooms_data,
+            'solar_panels': solar_panels,
+            'total_solar_panels': len(solar_panels),
             'timestamp': datetime.now().isoformat()
         })
         
