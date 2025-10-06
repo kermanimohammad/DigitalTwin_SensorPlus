@@ -31,6 +31,87 @@ def get_db_connection():
 
 @app.route('/')
 def home():
+    """Login page for DigitalTwin Sensor Dashboard"""
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DigitalTwin Sensor Login</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+            .login-container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+            .login-header { text-align: center; margin-bottom: 30px; }
+            .login-header h1 { color: #333; margin: 0; font-size: 2em; }
+            .login-header p { color: #666; margin: 10px 0 0 0; }
+            .form-group { margin-bottom: 20px; }
+            .form-group label { display: block; margin-bottom: 8px; color: #333; font-weight: bold; }
+            .form-group input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+            .form-group input:focus { outline: none; border-color: #007bff; }
+            .login-btn { width: 100%; background: #007bff; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+            .login-btn:hover { background: #0056b3; }
+            .error { color: #dc3545; text-align: center; margin-top: 15px; }
+            .demo-credentials { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 14px; }
+            .demo-credentials h4 { margin: 0 0 10px 0; color: #333; }
+            .demo-credentials p { margin: 5px 0; color: #666; }
+        </style>
+    </head>
+    <body>
+        <div class="login-container">
+            <div class="login-header">
+                <h1>🌡️ DigitalTwin</h1>
+                <p>Sensor Data Dashboard</p>
+            </div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="login-btn">Login</button>
+                
+                <div id="error" class="error" style="display: none;"></div>
+            </form>
+            
+            <div class="demo-credentials">
+                <h4>Demo Credentials:</h4>
+                <p><strong>Username:</strong> admin</p>
+                <p><strong>Password:</strong> sensor123</p>
+            </div>
+        </div>
+        
+        <script>
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                // Simple authentication (in production, use proper authentication)
+                if (username === 'admin' && password === 'sensor123') {
+                    // Store authentication status
+                    sessionStorage.setItem('authenticated', 'true');
+                    // Redirect to dashboard
+                    window.location.href = '/dashboard';
+                } else {
+                    document.getElementById('error').style.display = 'block';
+                    document.getElementById('error').textContent = 'Invalid username or password';
+                }
+            });
+        </script>
+    </body>
+    </html>
+    """
+
+@app.route('/dashboard')
+def dashboard():
     """Real-time sensor data dashboard"""
     return """
     <!DOCTYPE html>
@@ -41,7 +122,7 @@ def home():
         <title>DigitalTwin Sensor Dashboard</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-            .container { max-width: 1200px; margin: 0 auto; }
+            .container { max-width: 1400px; margin: 0 auto; }
             .header { text-align: center; margin-bottom: 30px; }
             .header h1 { color: #333; margin: 0; }
             .header p { color: #666; margin: 10px 0; }
@@ -49,19 +130,25 @@ def home():
             .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
             .stat-card h3 { margin: 0 0 10px 0; color: #007bff; }
             .stat-value { font-size: 2em; font-weight: bold; color: #28a745; margin: 10px 0; }
-            .rooms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+            .rooms-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
             .room-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .room-card h3 { margin: 0 0 15px 0; color: #333; }
+            .room-card h3 { margin: 0 0 15px 0; color: #333; display: flex; justify-content: space-between; align-items: center; }
+            .room-id { background: #007bff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
             .sensor-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
             .sensor-item:last-child { border-bottom: none; }
+            .sensor-info { display: flex; align-items: center; gap: 10px; }
             .sensor-name { font-weight: bold; }
-            .sensor-value { color: #28a745; }
+            .sensor-id { background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; }
+            .sensor-value { color: #28a745; font-weight: bold; }
             .loading { text-align: center; color: #666; }
             .error { color: #dc3545; text-align: center; }
             .refresh-btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px; }
             .refresh-btn:hover { background: #0056b3; }
+            .logout-btn { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+            .logout-btn:hover { background: #c82333; }
             .api-link { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 10px 15px; border-radius: 5px; text-decoration: none; }
             .api-link:hover { background: #218838; }
+            .header-controls { display: flex; justify-content: center; align-items: center; gap: 15px; }
         </style>
     </head>
     <body>
@@ -71,7 +158,10 @@ def home():
             <div class="header">
                 <h1>🌡️ DigitalTwin Sensor Dashboard</h1>
                 <p>Real-time sensor data monitoring</p>
-                <button class="refresh-btn" onclick="loadData()">🔄 Refresh Data</button>
+                <div class="header-controls">
+                    <button class="refresh-btn" onclick="loadData()">🔄 Refresh Data</button>
+                    <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+                </div>
             </div>
             
             <div class="stats-grid" id="statsGrid">
@@ -84,6 +174,16 @@ def home():
         </div>
         
         <script>
+            // Check authentication
+            if (!sessionStorage.getItem('authenticated')) {
+                window.location.href = '/';
+            }
+            
+            function logout() {
+                sessionStorage.removeItem('authenticated');
+                window.location.href = '/';
+            }
+            
             async function loadData() {
                 try {
                     // Load statistics
@@ -149,7 +249,10 @@ def home():
                                 }
                                 sensorsHtml += `
                                     <div class="sensor-item">
-                                        <span class="sensor-name">${sensorType.toUpperCase()}</span>
+                                        <div class="sensor-info">
+                                            <span class="sensor-name">${sensorType.toUpperCase()}</span>
+                                            <span class="sensor-id">ID: ${sensor.device_id}</span>
+                                        </div>
                                         <span class="sensor-value">${value}</span>
                                     </div>
                                 `;
@@ -157,7 +260,10 @@ def home():
                             
                             roomsHtml += `
                                 <div class="room-card">
-                                    <h3>🏠 ${room.room_id}</h3>
+                                    <h3>
+                                        🏠 ${room.room_id}
+                                        <span class="room-id">Room ID: ${room.room_id}</span>
+                                    </h3>
                                     ${sensorsHtml}
                                 </div>
                             `;
