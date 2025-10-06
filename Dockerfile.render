@@ -32,7 +32,7 @@ if __name__ == "__main__":\n\
     app.run(host="0.0.0.0", port=port, debug=False)' > web_server.py
 
 # متغیرهای محیطی
-ENV BROKER=test.mosquitto.org
+ENV BROKER=broker.hivemq.com
 ENV PORT=1883
 ENV PREFIX=building/demo
 ENV QOS=0
