@@ -221,8 +221,8 @@ def get_all_rooms():
         
         cursor = connection.cursor()
         
-        # Get all unique rooms
-        cursor.execute("SELECT DISTINCT room_id FROM temperature_data UNION SELECT DISTINCT room_id FROM humidity_data UNION SELECT DISTINCT room_id FROM co2_data UNION SELECT DISTINCT room_id FROM light_data UNION SELECT DISTINCT room_id FROM solar_data WHERE room_id IS NOT NULL")
+        # Get all unique rooms (solar_data doesn't have room_id column)
+        cursor.execute("SELECT DISTINCT room_id FROM temperature_data UNION SELECT DISTINCT room_id FROM humidity_data UNION SELECT DISTINCT room_id FROM co2_data UNION SELECT DISTINCT room_id FROM light_data WHERE room_id IS NOT NULL")
         rooms = [row[0] for row in cursor.fetchall()]
         
         rooms_data = []
@@ -271,8 +271,8 @@ def get_all_rooms():
                     'timestamp': light_data[3].isoformat()
                 }
             
-            # Solar
-            cursor.execute("SELECT device_id, power_watts, voltage_volts, current_amps, timestamp FROM solar_data WHERE room_id = %s ORDER BY timestamp DESC LIMIT 1", (room_id,))
+            # Solar (solar_data doesn't have room_id column, so we'll get latest solar data)
+            cursor.execute("SELECT device_id, power_watts, voltage_volts, current_amps, timestamp FROM solar_data ORDER BY timestamp DESC LIMIT 1")
             solar_data = cursor.fetchone()
             if solar_data:
                 room_data['sensors']['solar'] = {
