@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  broker:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf   # ← :ro را حذف کن
+      - ./mosquitto/passwd:/mosquitto/config/passwd                   # ← :ro را حذف کن
+      - mosq_data:/mosquitto/data
+      - mosq_log:/mosquitto/log
+
+  mqtt-sim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mqtt-sim
+    restart: unless-stopped
+    environment:
+      BROKER: broker           # نام سرویس داکر (به‌جای IP)
+      PORT: 1883
+      PREFIX: building/demo
+      QOS: 0
+      INTERVAL: 10             # ⬅️ هر 10 ثانیه ارسال
+      # DURATION: 600          # اگر موقت می‌خواهی؛ حذف کن تا دائم اجرا شود
+    depends_on:
+      - broker
+
+volumes:
+  mosq_data:
+  mosq_log:

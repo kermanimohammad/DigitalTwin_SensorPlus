@@ -1,0 +1,58 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# نصب dependencies
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# کپی فایل‌های پروژه
+COPY mqtt_simulator.py ./
+COPY mqtt-test.html ./
+
+# ایجاد یک وب سرور ساده برای سرو کردن فایل HTML
+RUN pip install flask
+
+# ایجاد فایل وب سرور
+COPY <<EOF ./web_server.py
+from flask import Flask, send_file, jsonify
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return send_file('mqtt-test.html')
+
+@app.route('/health')
+def health():
+    return jsonify({"status": "healthy", "service": "mqtt-simulator"})
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
+EOF
+
+# متغیرهای محیطی
+ENV BROKER=broker.hivemq.com
+ENV PORT=8883
+ENV PREFIX=building/demo
+ENV QOS=0
+ENV INTERVAL=10
+ENV MQTT_USER=""
+ENV MQTT_PASS=""
+
+# اجرای همزمان وب سرور و شبیه‌ساز
+COPY <<EOF ./start.sh
+#!/bin/bash
+# اجرای وب سرور در پس‌زمینه
+python web_server.py &
+# اجرای شبیه‌ساز MQTT
+python mqtt_simulator.py
+EOF
+
+RUN chmod +x start.sh
+
+EXPOSE 10000
+
+CMD ["./start.sh"]

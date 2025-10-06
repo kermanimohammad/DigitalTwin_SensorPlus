@@ -1,0 +1,8 @@
+pass: Mmk.40221175
+build container:
+    docker compose up --build -d
+    docker compose ps
+
+Test:
+    docker compose logs -f mqtt-sim
+
