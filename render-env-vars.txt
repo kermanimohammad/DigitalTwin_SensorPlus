@@ -1,9 +1,24 @@
-Environment Variables برای Render.com:
+# Environment Variables for Render.com Deployment
+# Add these in Render Dashboard > Environment Variables
 
-BROKER = broker.hivemq.com
-PORT = 8883
-PREFIX = building/demo
-QOS = 0
-INTERVAL = 10
-MQTT_USER = (خالی)
-MQTT_PASS = (خالی)
+PORT=10000
+PYTHONUNBUFFERED=1
+FLASK_ENV=production
+FLASK_DEBUG=False
+
+# Database Configuration (Bluehost)
+DB_HOST=kbz.rew.mybluehost.me
+DB_NAME=kbzrewmy_sensor
+DB_USER=kbzrewmy_mo_kerma
+DB_PASSWORD=Mehrafarid.5435
+DB_PORT=3306
+DB_CHARSET=utf8mb4
+
+# API Configuration
+API_HOST=0.0.0.0
+API_PORT=10000
+GUNICORN_WORKERS=1
+GUNICORN_TIMEOUT=30
+
+# Security
+SECRET_KEY=digitaltwin-sensor-api-secret-key-2024

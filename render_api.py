@@ -9,14 +9,14 @@ import os
 
 app = Flask(__name__)
 
-# Database configuration
+# Database configuration from environment variables
 DB_CONFIG = {
-    'host': 'kbz.rew.mybluehost.me',
-    'database': 'kbzrewmy_sensor',
-    'user': 'kbzrewmy_mo_kerma',
-    'password': 'Mehrafarid.5435',
-    'port': 3306,
-    'charset': 'utf8mb4',
+    'host': os.environ.get('DB_HOST', 'kbz.rew.mybluehost.me'),
+    'database': os.environ.get('DB_NAME', 'kbzrewmy_sensor'),
+    'user': os.environ.get('DB_USER', 'kbzrewmy_mo_kerma'),
+    'password': os.environ.get('DB_PASSWORD', 'Mehrafarid.5435'),
+    'port': int(os.environ.get('DB_PORT', 3306)),
+    'charset': os.environ.get('DB_CHARSET', 'utf8mb4'),
     'autocommit': True
 }
 
