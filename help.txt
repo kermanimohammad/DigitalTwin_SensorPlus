@@ -6,3 +6,9 @@ build container:
 Test:
     docker compose logs -f mqtt-sim
 
+url: kbz.rew.mybluehost.me
+Database Name: kbzrewmy_sensor
+user name: kbzrewmy_mo_kerma
+password: Mehrafarid.5435
+
+https://digitaltwin-sensorplus.onrender.com

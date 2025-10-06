@@ -1,2 +1,4 @@
 paho-mqtt>=1.6.1
 flask>=2.0.0
+mysql-connector-python>=8.0.0
+sqlalchemy>=1.4.0

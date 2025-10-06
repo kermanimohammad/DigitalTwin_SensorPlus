@@ -29,6 +29,31 @@ services:
     depends_on:
       - broker
 
+  mqtt-subscriber:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mqtt-subscriber
+    restart: unless-stopped
+    environment:
+      BROKER: broker           # نام سرویس داکر (به‌جای IP)
+      PORT: 1883
+      TOPICS: building/demo/#  # موضوعات MQTT برای گوش دادن
+      QOS: 0
+    depends_on:
+      - broker
+    command: python mqtt_subscriber.py
+
+  web-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: web-dashboard
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    command: python web_dashboard.py
+
 volumes:
   mosq_data:
   mosq_log:
