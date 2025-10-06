@@ -2,7 +2,8 @@ services:
   - type: web
     name: sensor-api
     env: python
-    buildCommand: pip install -r render_requirements.txt
+    pythonVersion: 3.11.0
+    buildCommand: pip install --upgrade pip && pip install -r render_requirements.txt
     startCommand: gunicorn render_api:app
     plan: free
     envVars:
