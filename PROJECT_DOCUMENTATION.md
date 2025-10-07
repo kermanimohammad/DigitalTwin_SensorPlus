@@ -17,9 +17,9 @@
 ### Data Flow
 
 ```
-Sensors → MQTT Broker → MQTT Subscriber → Database + Real-time Display
+Sensors → MQTT Broker → MQTT Subscriber → Database 
                                     ↓
-                            WebSocket → Dashboard
+                            WebSocket → Dashboard + Real-time Display
                                     ↓
                             REST API → External Apps
 ```

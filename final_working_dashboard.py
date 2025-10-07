@@ -118,8 +118,9 @@ DASHBOARD_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>داشبورد نهایی - Final Dashboard</title>
+    <title>داشبورد سنسورها - Sensor Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -301,13 +302,113 @@ DASHBOARD_TEMPLATE = """
             background: #f8d7da;
             color: #721c24;
         }
+        .sensor-chart {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .sensor-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .sensor-card:hover {
+            transform: translateY(-3px);
+        }
+        .sensor-icon {
+            font-size: 2em;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .sensor-title {
+            font-weight: bold;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .sensor-value-large {
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .temperature { color: #e74c3c; }
+        .humidity { color: #3498db; }
+        .co2 { color: #f39c12; }
+        .light { color: #f1c40f; }
+        .solar { color: #e67e22; }
+        .room-info {
+            background: #ecf0f1;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin: 2px;
+        }
+        .status-online { background: #d4edda; color: #155724; }
+        .status-offline { background: #f8d7da; color: #721c24; }
+        .status-warning { background: #fff3cd; color: #856404; }
+        .tabs {
+            display: flex;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .tab.active {
+            background: rgba(255,255,255,0.2);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🌡️ داشبورد نهایی</h1>
-            <p>Real-time + Database Storage</p>
+            <h1>🌡️ داشبورد سنسورها</h1>
+            <p>نمایش اطلاعات دریافتی از سنسورها - Real-time Sensor Data</p>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('realtime')">📊 نمایش زنده</div>
+            <div class="tab" onclick="switchTab('charts')">📈 نمودارها</div>
+            <div class="tab" onclick="switchTab('history')">📋 تاریخچه</div>
         </div>
         
         <div class="status-bar">
@@ -337,14 +438,58 @@ DASHBOARD_TEMPLATE = """
             <button class="btn" onclick="clearData()">🗑️ پاک کردن</button>
         </div>
         
-        <div class="devices-grid" id="devicesGrid">
-            <div class="no-data">در حال انتظار برای دریافت داده از سنسورها...</div>
+        <!-- Real-time Tab -->
+        <div id="realtime" class="tab-content active">
+            <div class="sensor-grid" id="sensorGrid">
+                <div class="no-data">در حال انتظار برای دریافت داده از سنسورها...</div>
+            </div>
+        </div>
+        
+        <!-- Charts Tab -->
+        <div id="charts" class="tab-content">
+            <div class="sensor-chart">
+                <h3>📈 نمودار تغییرات دما</h3>
+                <div class="chart-container">
+                    <canvas id="temperatureChart"></canvas>
+                </div>
+            </div>
+            <div class="sensor-chart">
+                <h3>💧 نمودار رطوبت</h3>
+                <div class="chart-container">
+                    <canvas id="humidityChart"></canvas>
+                </div>
+            </div>
+            <div class="sensor-chart">
+                <h3>🌬️ نمودار CO2</h3>
+                <div class="chart-container">
+                    <canvas id="co2Chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+            <div class="sensor-chart">
+                <h3>📋 تاریخچه داده‌ها</h3>
+                <div id="historyData">
+                    <div class="no-data">در حال بارگذاری تاریخچه...</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         const socket = io();
+        let charts = {};
+        let sensorDataHistory = {
+            temperature: [],
+            humidity: [],
+            co2: [],
+            light: [],
+            solar: []
+        };
         
+        // Socket events
         socket.on('connect', function() {
             document.getElementById('connectionStatus').classList.add('connected');
             document.getElementById('connectionText').textContent = 'متصل';
@@ -356,39 +501,63 @@ DASHBOARD_TEMPLATE = """
         });
         
         socket.on('sensor_data', function(data) {
-            updateDeviceCard(data);
+            updateSensorCard(data);
+            updateCharts(data);
             updateDeviceCount();
         });
         
-        function updateDeviceCard(data) {
-            const devicesGrid = document.getElementById('devicesGrid');
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Initialize charts if charts tab is selected
+            if (tabName === 'charts') {
+                initializeCharts();
+            } else if (tabName === 'history') {
+                loadHistoryData();
+            }
+        }
+        
+        // Sensor card management
+        function updateSensorCard(data) {
+            const sensorGrid = document.getElementById('sensorGrid');
             const deviceId = data.device_id;
             
             // Remove "no data" message if it exists
-            const noDataMsg = devicesGrid.querySelector('.no-data');
+            const noDataMsg = sensorGrid.querySelector('.no-data');
             if (noDataMsg) {
                 noDataMsg.remove();
             }
             
-            // Find or create device card
-            let deviceCard = document.getElementById(`device-${deviceId}`);
-            if (!deviceCard) {
-                deviceCard = createDeviceCard(deviceId);
-                devicesGrid.appendChild(deviceCard);
+            // Find or create sensor card
+            let sensorCard = document.getElementById(`sensor-${deviceId}`);
+            if (!sensorCard) {
+                sensorCard = createSensorCard(deviceId);
+                sensorGrid.appendChild(sensorCard);
             }
             
             // Update card content
-            updateCardContent(deviceCard, data);
+            updateSensorCardContent(sensorCard, data);
         }
         
-        function createDeviceCard(deviceId) {
+        function createSensorCard(deviceId) {
             const card = document.createElement('div');
-            card.className = 'device-card';
-            card.id = `device-${deviceId}`;
+            card.className = 'sensor-card';
+            card.id = `sensor-${deviceId}`;
             return card;
         }
         
-        function updateCardContent(card, data) {
+        function updateSensorCardContent(card, data) {
             const kind = data.kind || 'unknown';
             const value = data.value !== null ? data.value : 'N/A';
             const unit = data.unit || '';
@@ -396,32 +565,186 @@ DASHBOARD_TEMPLATE = """
             const dbStatus = data.db_saved ? 'success' : 'error';
             const dbStatusText = data.db_saved ? 'ذخیره شد' : 'خطا';
             
+            // Get sensor icon and color
+            const sensorInfo = getSensorInfo(kind);
+            
             card.innerHTML = `
-                <div class="device-header">
-                    <div class="device-id">${data.device_id}</div>
-                    <div class="device-kind">${kind.toUpperCase()}</div>
-                </div>
-                <div class="sensor-value">${value}</div>
+                <div class="sensor-icon ${kind}">${sensorInfo.icon}</div>
+                <div class="sensor-title">${sensorInfo.title}</div>
+                <div class="sensor-value-large ${kind}">${value}</div>
                 <div class="sensor-unit">${unit}</div>
-                <div class="sensor-details">
-                    <div class="detail-item">
-                        <div class="detail-label">نوع سنسور</div>
-                        <div class="detail-value">${kind}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">وضعیت دیتابیس</div>
-                        <div class="detail-value">
-                            <span class="db-status ${dbStatus}">${dbStatusText}</span>
-                        </div>
-                    </div>
+                <div class="room-info">
+                    <div><strong>دستگاه:</strong> ${data.device_id}</div>
+                    <div><strong>نوع:</strong> ${kind}</div>
+                    <div><strong>وضعیت:</strong> <span class="db-status ${dbStatus}">${dbStatusText}</span></div>
                 </div>
                 <div class="timestamp">آخرین بروزرسانی: ${timestamp}</div>
             `;
         }
         
+        function getSensorInfo(kind) {
+            const sensorMap = {
+                'temperature': { icon: '🌡️', title: 'دماسنج' },
+                'humidity': { icon: '💧', title: 'رطوبت‌سنج' },
+                'co2': { icon: '🌬️', title: 'سنسور CO2' },
+                'light': { icon: '💡', title: 'نور' },
+                'solar': { icon: '☀️', title: 'انرژی خورشیدی' }
+            };
+            return sensorMap[kind] || { icon: '📊', title: 'سنسور' };
+        }
+        
+        // Chart management
+        function initializeCharts() {
+            if (Object.keys(charts).length > 0) return; // Already initialized
+            
+            const chartConfig = {
+                type: 'line',
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'زمان'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'مقدار'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            };
+            
+            // Temperature Chart
+            const tempCtx = document.getElementById('temperatureChart').getContext('2d');
+            charts.temperature = new Chart(tempCtx, {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'دما (°C)',
+                        data: [],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4
+                    }]
+                }
+            });
+            
+            // Humidity Chart
+            const humCtx = document.getElementById('humidityChart').getContext('2d');
+            charts.humidity = new Chart(humCtx, {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'رطوبت (%)',
+                        data: [],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4
+                    }]
+                }
+            });
+            
+            // CO2 Chart
+            const co2Ctx = document.getElementById('co2Chart').getContext('2d');
+            charts.co2 = new Chart(co2Ctx, {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'CO2 (ppm)',
+                        data: [],
+                        borderColor: '#f39c12',
+                        backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                        tension: 0.4
+                    }]
+                }
+            });
+        }
+        
+        function updateCharts(data) {
+            if (!charts[data.kind]) return;
+            
+            const chart = charts[data.kind];
+            const now = new Date().toLocaleTimeString('fa-IR');
+            
+            // Add new data point
+            chart.data.labels.push(now);
+            chart.data.datasets[0].data.push(data.value);
+            
+            // Keep only last 20 data points
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+            
+            chart.update('none');
+        }
+        
+        // History data
+        function loadHistoryData() {
+            fetch('/api/history')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayHistoryData(data.records);
+                    } else {
+                        document.getElementById('historyData').innerHTML = 
+                            '<div class="no-data">خطا در بارگذاری تاریخچه</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading history:', error);
+                    document.getElementById('historyData').innerHTML = 
+                        '<div class="no-data">خطا در بارگذاری تاریخچه</div>';
+                });
+        }
+        
+        function displayHistoryData(records) {
+            const historyDiv = document.getElementById('historyData');
+            if (records.length === 0) {
+                historyDiv.innerHTML = '<div class="no-data">هیچ رکوردی یافت نشد</div>';
+                return;
+            }
+            
+            let html = '<div class="sensor-grid">';
+            records.forEach(record => {
+                const sensorInfo = getSensorInfo(record.kind);
+                html += `
+                    <div class="sensor-card">
+                        <div class="sensor-icon ${record.kind}">${sensorInfo.icon}</div>
+                        <div class="sensor-title">${sensorInfo.title}</div>
+                        <div class="sensor-value-large ${record.kind}">${record.value}</div>
+                        <div class="sensor-unit">${record.unit || ''}</div>
+                        <div class="room-info">
+                            <div><strong>دستگاه:</strong> ${record.device_id}</div>
+                            <div><strong>زمان:</strong> ${new Date(record.timestamp).toLocaleString('fa-IR')}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            historyDiv.innerHTML = html;
+        }
+        
+        // Utility functions
         function updateDeviceCount() {
-            const deviceCards = document.querySelectorAll('.device-card');
-            document.getElementById('deviceCount').textContent = deviceCards.length;
+            const sensorCards = document.querySelectorAll('.sensor-card');
+            document.getElementById('deviceCount').textContent = sensorCards.length;
         }
         
         function refreshData() {
@@ -436,7 +759,7 @@ DASHBOARD_TEMPLATE = """
                         // Update existing cards
                         Object.keys(data.devices).forEach(deviceId => {
                             const deviceData = data.devices[deviceId];
-                            updateDeviceCard({
+                            updateSensorCard({
                                 device_id: deviceId,
                                 kind: deviceData.kind,
                                 value: deviceData.value,
@@ -468,9 +791,16 @@ DASHBOARD_TEMPLATE = """
         }
         
         function clearData() {
-            document.getElementById('devicesGrid').innerHTML = 
+            document.getElementById('sensorGrid').innerHTML = 
                 '<div class="no-data">داده‌ها پاک شدند. در حال انتظار برای دریافت داده جدید...</div>';
             document.getElementById('deviceCount').textContent = '0';
+            
+            // Clear charts
+            Object.values(charts).forEach(chart => {
+                chart.data.labels = [];
+                chart.data.datasets[0].data = [];
+                chart.update();
+            });
         }
         
         // Load initial data
@@ -533,6 +863,46 @@ def test_database():
             'record_count': record_count,
             'latest_record': latest_record,
             'message': 'Database is working correctly'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/history')
+def api_history():
+    """API endpoint to get historical sensor data"""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        device_id = request.args.get('device_id')
+        kind = request.args.get('kind')
+        
+        records = db_manager.get_recent_data(device_id=device_id, kind=kind, limit=limit)
+        
+        # Convert records to JSON-serializable format
+        history_data = []
+        for record in records:
+            history_data.append({
+                'id': record.id,
+                'device_id': record.device_id,
+                'kind': record.kind,
+                'room_id': record.room_id,
+                'value': record.value,
+                'unit': record.unit,
+                'power_w': record.power_w,
+                'voltage': record.voltage,
+                'current': record.current,
+                'on_status': record.on_status,
+                'timestamp': record.timestamp.isoformat(),
+                'raw_data': record.raw_data
+            })
+        
+        return jsonify({
+            'success': True,
+            'records': history_data,
+            'count': len(history_data)
         })
         
     except Exception as e:
