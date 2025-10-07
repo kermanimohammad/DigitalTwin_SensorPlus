@@ -1,0 +1,23 @@
+# Ultra Simple Dockerfile for Render.com
+# No health checks, no complex setup - just basic Flask
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY render_requirements_minimal.txt ./
+RUN pip install --upgrade pip && pip install -r render_requirements_minimal.txt
+
+# Copy the ultra simple application file
+COPY render_dashboard_ultra_simple.py ./
+
+# Expose port
+EXPOSE 10000
+
+# Set environment variables
+ENV PORT=10000
+ENV PYTHONUNBUFFERED=1
+
+# Run the application
+CMD ["python", "render_dashboard_ultra_simple.py"]
