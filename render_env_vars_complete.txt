@@ -1,0 +1,23 @@
+# Environment Variables for Render.com
+# Copy these values to Render Dashboard > Environment Variables
+
+# Database Configuration
+DB_HOST=kbz.rew.mybluehost.me
+DB_NAME=kbzrewmy_sensor
+DB_USER=kbzrewmy_mo_kerma
+DB_PASSWORD=Mehrafarid.5435
+DB_PORT=3306
+DB_CHARSET=utf8mb4
+
+# Application Configuration
+PORT=10000
+PYTHONUNBUFFERED=1
+FLASK_ENV=production
+FLASK_DEBUG=False
+SECRET_KEY=digitaltwin-sensor-api-secret-key-2024
+
+# Simulator Configuration
+SIMULATOR_INTERVAL=5
+SIMULATOR_DEVICES=21
+DASHBOARD_TITLE=DigitalTwin Sensor Dashboard
+LOG_LEVEL=INFO
