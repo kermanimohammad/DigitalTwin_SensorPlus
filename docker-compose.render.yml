@@ -1,0 +1,46 @@
+# Docker Compose for Render.com deployment
+# For local testing and development
+
+version: '3.8'
+
+services:
+  digitaltwin-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.render
+    ports:
+      - "10000:10000"
+    environment:
+      - PORT=10000
+      - FLASK_ENV=production
+      - FLASK_DEBUG=false
+      - SECRET_KEY=render-docker-secret-key-2024
+      - SIMULATOR_INTERVAL=5
+      - SIMULATOR_DEVICES=21
+      - SIMULATOR_ENABLED=true
+      - DASHBOARD_TITLE=DigitalTwin Sensor Dashboard
+      - DASHBOARD_AUTO_REFRESH=true
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10000/api/data"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - digitaltwin-dashboard
+    restart: unless-stopped
+    profiles:
+      - production

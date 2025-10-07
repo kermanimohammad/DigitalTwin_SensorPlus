@@ -1,0 +1,23 @@
+# Simple Dockerfile for Render.com
+# Minimal configuration for quick deployment
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY render_requirements.txt ./
+RUN pip install --upgrade pip && pip install -r render_requirements.txt
+
+# Copy the main application file
+COPY render_dashboard_env.py ./
+
+# Expose port
+EXPOSE 10000
+
+# Set environment variables
+ENV PORT=10000
+ENV PYTHONUNBUFFERED=1
+
+# Run the application
+CMD ["python", "render_dashboard_env.py"]

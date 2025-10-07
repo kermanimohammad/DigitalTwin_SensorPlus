@@ -1,20 +1,43 @@
+# Dockerfile for Render.com Deployment
+# Optimized for production deployment
+
 FROM python:3.11-slim
 
+# Set working directory
 WORKDIR /app
 
-# Copy requirements and install dependencies
-COPY render_requirements.txt ./
-RUN pip install --upgrade pip && pip install -r render_requirements.txt
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PORT=10000
 
-# Copy the API file
-COPY render_api.py ./
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY render_requirements.txt ./
+
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r render_requirements.txt
+
+# Copy application files
+COPY render_dashboard_env.py ./
+COPY render_dashboard.py ./
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash app && \
+    chown -R app:app /app
+USER app
 
 # Expose port
 EXPOSE 10000
 
-# Set environment variables
-ENV PORT=10000
-ENV PYTHONUNBUFFERED=1
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:10000/api/data || exit 1
 
 # Run the application
-CMD ["sh", "-c", "gunicorn render_api:app --bind 0.0.0.0:$PORT"]
+CMD ["python", "render_dashboard_env.py"]
