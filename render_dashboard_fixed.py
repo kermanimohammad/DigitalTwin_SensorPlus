@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Render.com Compatible Dashboard with Environment Variables
-Enhanced version with configurable environment variables
+Render.com Compatible Dashboard - Fixed Version
+Simple version without complex environment variable handling
 """
 
 import os
@@ -15,91 +15,36 @@ from datetime import datetime
 from flask import Flask, render_template_string, jsonify, request
 from flask_socketio import SocketIO, emit
 
-# Load environment variables with defaults
-def get_env_var(key, default=None, var_type=str):
-    """Get environment variable with type conversion and default value"""
-    value = os.getenv(key, default)
-    if value is None:
-        return default
-    
-    # If value is already the correct type (e.g., default value), return it
-    if isinstance(value, var_type):
-        return value
-    
-    if var_type == bool:
-        if isinstance(value, str):
-            return value.lower() in ('true', '1', 'yes', 'on')
-        else:
-            return bool(value)
-    elif var_type == int:
-        try:
-            return int(value)
-        except (ValueError, TypeError):
-            return default
-    elif var_type == float:
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            return default
-    else:
-        return str(value)
-
-# Configuration from environment variables
-CONFIG = {
-    # Server Configuration
-    'PORT': get_env_var('PORT', 5000, int),
-    'SECRET_KEY': get_env_var('SECRET_KEY', 'render-sensor-secret-key-2024'),
-    'FLASK_ENV': get_env_var('FLASK_ENV', 'production'),
-    'FLASK_DEBUG': get_env_var('FLASK_DEBUG', False, bool),
-    'PYTHONUNBUFFERED': get_env_var('PYTHONUNBUFFERED', '1'),
-    
-    # Simulator Configuration
-    'SIMULATOR_INTERVAL': get_env_var('SIMULATOR_INTERVAL', 5, int),
-    'SIMULATOR_ENABLED': get_env_var('SIMULATOR_ENABLED', True, bool),
-    'SIMULATOR_DEVICES': get_env_var('SIMULATOR_DEVICES', 21, int),
-    
-    # Dashboard Configuration
-    'DASHBOARD_TITLE': get_env_var('DASHBOARD_TITLE', 'DigitalTwin Sensor Dashboard'),
-    'DASHBOARD_REFRESH_INTERVAL': get_env_var('DASHBOARD_REFRESH_INTERVAL', 10000, int),
-    'DASHBOARD_AUTO_REFRESH': get_env_var('DASHBOARD_AUTO_REFRESH', True, bool),
-    
-    # Logging Configuration
-    'LOG_LEVEL': get_env_var('LOG_LEVEL', 'INFO'),
-    'LOG_FORMAT': get_env_var('LOG_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
-    
-    # Performance Configuration
-    'SOCKETIO_ASYNC_MODE': get_env_var('SOCKETIO_ASYNC_MODE', 'eventlet'),
-    'SOCKETIO_CORS_ALLOWED_ORIGINS': get_env_var('SOCKETIO_CORS_ALLOWED_ORIGINS', '*'),
-}
-
 # Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = CONFIG['SECRET_KEY']
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'render-sensor-secret-key-2024')
 
 # Initialize SocketIO
-socketio = SocketIO(
-    app, 
-    cors_allowed_origins=CONFIG['SOCKETIO_CORS_ALLOWED_ORIGINS'],
-    async_mode=CONFIG['SOCKETIO_ASYNC_MODE']
-)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Global storage
 latest_data = {}
 connected_devices = set()
 message_count = 0
 start_time = time.time()
-simulator_running = CONFIG['SIMULATOR_ENABLED']
+simulator_running = True
 
-class ConfigurableMQTTSimulator:
-    """Configurable MQTT Simulator for Render.com deployment"""
+# Configuration with simple defaults
+SIMULATOR_INTERVAL = int(os.getenv('SIMULATOR_INTERVAL', '5'))
+SIMULATOR_DEVICES = int(os.getenv('SIMULATOR_DEVICES', '21'))
+DASHBOARD_TITLE = os.getenv('DASHBOARD_TITLE', 'DigitalTwin Sensor Dashboard')
+DASHBOARD_AUTO_REFRESH = os.getenv('DASHBOARD_AUTO_REFRESH', 'true').lower() == 'true'
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+
+class SimpleMQTTSimulator:
+    """Simple MQTT Simulator for Render.com deployment"""
     
     def __init__(self):
         self.running = False
-        self.interval = CONFIG['SIMULATOR_INTERVAL']
-        self.device_count = CONFIG['SIMULATOR_DEVICES']
+        self.interval = SIMULATOR_INTERVAL
+        self.device_count = SIMULATOR_DEVICES
         
         # Calculate room count based on device count
-        # 21 devices = 5 rooms × 4 sensors + 1 solar
         self.room_count = min(5, max(1, (self.device_count - 1) // 4))
         
         # Initialize rooms with realistic starting values
@@ -122,7 +67,7 @@ class ConfigurableMQTTSimulator:
             'on': True
         }
         
-        print(f"[Configurable Simulator] Initialized with {self.room_count} rooms, {self.device_count} devices")
+        print(f"[Simple Simulator] Initialized with {self.room_count} rooms, {self.device_count} devices")
     
     def now_ms(self):
         return int(time.time() * 1000)
@@ -188,15 +133,11 @@ class ConfigurableMQTTSimulator:
             'timestamp': timestamp.isoformat()
         })
         
-        if CONFIG['LOG_LEVEL'] == 'DEBUG':
+        if LOG_LEVEL == 'DEBUG':
             print(f"[Simulator] Published: {device_id} = {value} {unit}")
     
     def run(self):
         """Run the simulator"""
-        if not CONFIG['SIMULATOR_ENABLED']:
-            print("[Simulator] Disabled by environment variable")
-            return
-            
         self.running = True
         print(f"[Simulator] Started publishing {self.device_count} devices every {self.interval} seconds")
         
@@ -271,16 +212,16 @@ class ConfigurableMQTTSimulator:
         self.running = False
 
 # Initialize simulator
-simulator = ConfigurableMQTTSimulator()
+simulator = SimpleMQTTSimulator()
 
-# Dashboard HTML Template with configurable title
+# Dashboard HTML Template
 DASHBOARD_TEMPLATE = f'''
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{CONFIG['DASHBOARD_TITLE']}</title>
+    <title>{DASHBOARD_TITLE}</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body {{
@@ -471,16 +412,16 @@ DASHBOARD_TEMPLATE = f'''
 <body>
     <div class="container">
         <div class="header">
-            <h1>{CONFIG['DASHBOARD_TITLE']} <span class="render-badge">RENDER</span></h1>
-            <p>Real-time sensor data monitoring with environment configuration</p>
+            <h1>{DASHBOARD_TITLE} <span class="render-badge">RENDER</span></h1>
+            <p>Real-time sensor data monitoring</p>
         </div>
         
         <div class="config-info">
             <strong>Configuration:</strong> 
-            Devices: {CONFIG['SIMULATOR_DEVICES']} | 
-            Interval: {CONFIG['SIMULATOR_INTERVAL']}s | 
-            Auto-refresh: {CONFIG['DASHBOARD_AUTO_REFRESH']} | 
-            Environment: {CONFIG['FLASK_ENV']}
+            Devices: {SIMULATOR_DEVICES} | 
+            Interval: {SIMULATOR_INTERVAL}s | 
+            Auto-refresh: {DASHBOARD_AUTO_REFRESH} | 
+            Log Level: {LOG_LEVEL}
         </div>
         
         <div class="status-bar">
@@ -520,8 +461,8 @@ DASHBOARD_TEMPLATE = f'''
         var socket = io();
         var messageCount = 0;
         var startTime = Date.now();
-        var simulatorRunning = {str(CONFIG['SIMULATOR_ENABLED']).lower()};
-        var refreshInterval = {CONFIG['DASHBOARD_REFRESH_INTERVAL']};
+        var simulatorRunning = true;
+        var refreshInterval = 10000;
 
         // Socket events
         socket.on('connect', function() {{
@@ -657,7 +598,7 @@ DASHBOARD_TEMPLATE = f'''
         setInterval(updateStatus, 1000);
         
         // Auto-refresh if enabled
-        if ({str(CONFIG['DASHBOARD_AUTO_REFRESH']).lower()}) {{
+        if ({str(DASHBOARD_AUTO_REFRESH).lower()}) {{
             setInterval(refreshData, refreshInterval);
         }}
     </script>
@@ -684,10 +625,10 @@ def api_data():
         'uptime': int(time.time() - start_time),
         'simulator_running': simulator.running,
         'config': {
-            'simulator_interval': CONFIG['SIMULATOR_INTERVAL'],
-            'simulator_devices': CONFIG['SIMULATOR_DEVICES'],
-            'dashboard_title': CONFIG['DASHBOARD_TITLE'],
-            'flask_env': CONFIG['FLASK_ENV']
+            'simulator_interval': SIMULATOR_INTERVAL,
+            'simulator_devices': SIMULATOR_DEVICES,
+            'dashboard_title': DASHBOARD_TITLE,
+            'log_level': LOG_LEVEL
         }
     })
 
@@ -696,7 +637,13 @@ def api_config():
     """API endpoint to get current configuration"""
     return jsonify({
         'success': True,
-        'config': CONFIG,
+        'config': {
+            'simulator_interval': SIMULATOR_INTERVAL,
+            'simulator_devices': SIMULATOR_DEVICES,
+            'dashboard_title': DASHBOARD_TITLE,
+            'dashboard_auto_refresh': DASHBOARD_AUTO_REFRESH,
+            'log_level': LOG_LEVEL
+        },
         'simulator_status': {
             'running': simulator.running,
             'interval': simulator.interval,
@@ -727,7 +674,7 @@ def toggle_simulator():
 @socketio.on('connect')
 def handle_connect():
     print(f"[WebSocket] Client connected")
-    emit('status', {'message': f'Connected to {CONFIG["DASHBOARD_TITLE"]}'})
+    emit('status', {'message': f'Connected to {DASHBOARD_TITLE}'})
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -738,32 +685,28 @@ def start_simulator():
     global start_time
     start_time = time.time()
     
-    if CONFIG['SIMULATOR_ENABLED']:
-        # Start simulator in background thread
-        simulator_thread = threading.Thread(target=simulator.run, daemon=True)
-        simulator_thread.start()
-        print(f"[System] Simulator started with {CONFIG['SIMULATOR_DEVICES']} devices")
-    else:
-        print("[System] Simulator disabled by environment variable")
+    # Start simulator in background thread
+    simulator_thread = threading.Thread(target=simulator.run, daemon=True)
+    simulator_thread.start()
+    print(f"[System] Simulator started with {SIMULATOR_DEVICES} devices")
 
 if __name__ == '__main__':
     print("=" * 70)
-    print(f"🚀 Starting {CONFIG['DASHBOARD_TITLE']}")
+    print(f"🚀 Starting {DASHBOARD_TITLE}")
     print("=" * 70)
     print(f"📊 Configuration:")
-    print(f"   - Simulator Devices: {CONFIG['SIMULATOR_DEVICES']}")
-    print(f"   - Simulator Interval: {CONFIG['SIMULATOR_INTERVAL']}s")
-    print(f"   - Simulator Enabled: {CONFIG['SIMULATOR_ENABLED']}")
-    print(f"   - Dashboard Title: {CONFIG['DASHBOARD_TITLE']}")
-    print(f"   - Flask Environment: {CONFIG['FLASK_ENV']}")
-    print(f"   - Auto Refresh: {CONFIG['DASHBOARD_AUTO_REFRESH']}")
+    print(f"   - Simulator Devices: {SIMULATOR_DEVICES}")
+    print(f"   - Simulator Interval: {SIMULATOR_INTERVAL}s")
+    print(f"   - Dashboard Title: {DASHBOARD_TITLE}")
+    print(f"   - Auto Refresh: {DASHBOARD_AUTO_REFRESH}")
+    print(f"   - Log Level: {LOG_LEVEL}")
     print("=" * 70)
     
     # Start simulator
     start_simulator()
     
     # Get port from environment (Render.com sets this)
-    port = CONFIG['PORT']
+    port = int(os.getenv('PORT', 5000))
     
     print(f"🌐 Dashboard: http://localhost:{port}")
     print(f"🎯 Features:")
@@ -775,4 +718,4 @@ if __name__ == '__main__':
     print("=" * 70)
     
     # Start Flask app
-    socketio.run(app, host='0.0.0.0', port=port, debug=CONFIG['FLASK_DEBUG'])
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)

@@ -32,8 +32,7 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application files
-COPY render_dashboard_env.py ./
-COPY render_dashboard.py ./
+COPY render_dashboard_fixed.py ./
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app && \
@@ -55,4 +54,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:10000/api/data || exit 1
 
 # Run the application
-CMD ["python", "render_dashboard_env.py"]
+CMD ["python", "render_dashboard_fixed.py"]

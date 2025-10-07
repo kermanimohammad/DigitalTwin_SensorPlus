@@ -24,8 +24,7 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r render_requirements.txt
 
 # Copy application files
-COPY render_dashboard_env.py ./
-COPY render_dashboard.py ./
+COPY render_dashboard_fixed.py ./
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash app && \
@@ -40,4 +39,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:10000/api/data || exit 1
 
 # Run the application
-CMD ["python", "render_dashboard_env.py"]
+CMD ["python", "render_dashboard_fixed.py"]

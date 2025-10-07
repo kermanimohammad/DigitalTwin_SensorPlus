@@ -10,7 +10,7 @@ COPY render_requirements.txt ./
 RUN pip install --upgrade pip && pip install -r render_requirements.txt
 
 # Copy the main application file
-COPY render_dashboard_env.py ./
+COPY render_dashboard_fixed.py ./
 
 # Expose port
 EXPOSE 10000
@@ -20,4 +20,4 @@ ENV PORT=10000
 ENV PYTHONUNBUFFERED=1
 
 # Run the application
-CMD ["python", "render_dashboard_env.py"]
+CMD ["python", "render_dashboard_fixed.py"]
