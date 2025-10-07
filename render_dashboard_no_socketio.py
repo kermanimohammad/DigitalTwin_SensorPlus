@@ -294,18 +294,18 @@ class RealisticSimulator:
         self.running = False
 
 class DatabaseScheduler:
-    """Database scheduler to save data every 1 minute to specific sensor tables"""
+    """Database scheduler to save data every 5 minutes to specific sensor tables"""
     
     def __init__(self):
         self.running = False
-        self.interval = 60  # 1 minute = 60 seconds
+        self.interval = 300  # 5 minutes = 300 seconds
         self.save_count = 0
         self.error_count = 0
         
     def run(self):
         """Run the database scheduler"""
         self.running = True
-        print(f"[Database Scheduler] Started - saving data every {self.interval} seconds (1 minute)")
+        print(f"[Database Scheduler] Started - saving data every {self.interval} seconds (5 minutes)")
         
         while self.running:
             try:
@@ -393,7 +393,7 @@ NO_SOCKETIO_TEMPLATE = '''
     <div class="container">
         <div class="header">
             <h1>DigitalTwin Sensor Dashboard</h1>
-            <p>All 21 devices across 5 rooms + Solar Farm | Realistic temperature simulation | Auto-save every 1 minute</p>
+            <p>All 21 devices across 5 rooms + Solar Farm | Realistic temperature simulation | Auto-save every 5 minutes</p>
         </div>
         
         <div class="status">
@@ -746,7 +746,7 @@ def start_simulator():
     if DATABASE_AVAILABLE:
         db_scheduler_thread = threading.Thread(target=db_scheduler.run, daemon=True)
         db_scheduler_thread.start()
-        print("[System] Database scheduler started - saving data every 1 minute to specific tables")
+        print("[System] Database scheduler started - saving data every 5 minutes to specific tables")
     else:
         print("[System] Database scheduler not started - database not available")
 
