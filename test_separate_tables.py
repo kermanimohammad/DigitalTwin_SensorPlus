@@ -1,83 +1,133 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import requests
-import time
+"""
+Test script for separate sensor tables functionality
+"""
+
+import sys
+import os
+from datetime import datetime
+import json
+
+# Add current directory to path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from database import db_manager, TemperatureData, HumidityData, CO2Data, LightData, SolarData, SensorData
 
 def test_separate_tables():
-    """Test all separate table endpoints"""
+    """Test the separate tables functionality"""
+    print("=" * 60)
+    print("Testing Separate Sensor Tables")
+    print("=" * 60)
     
-    print("=== Testing Separate Tables System ===")
+    # Test database connection
+    print("\n1. Testing database connection...")
+    if not db_manager.test_connection():
+        print("❌ Database connection failed!")
+        return False
+    print("✅ Database connection successful!")
     
-    base_url = "http://localhost:5001"
-    endpoints = [
-        '/api/temperature',
-        '/api/humidity', 
-        '/api/co2',
-        '/api/light',
-        '/api/solar'
+    # Test table statistics
+    print("\n2. Getting table statistics...")
+    stats = db_manager.get_table_statistics()
+    for table_name, stat in stats.items():
+        if 'error' in stat:
+            print(f"   {table_name}: ❌ {stat['error']}")
+        else:
+            print(f"   {table_name}: {stat['count']} records, latest: {stat['latest_timestamp']}")
+    
+    # Test saving data to different tables
+    print("\n3. Testing data saving to separate tables...")
+    
+    test_data = [
+        {
+            'deviceId': 'temp-test-1',
+            'kind': 'temperature',
+            'value': 25.5,
+            'unit': '°C',
+            'roomId': 'test-room',
+            'ts': int(datetime.now().timestamp() * 1000)
+        },
+        {
+            'deviceId': 'hum-test-1',
+            'kind': 'humidity',
+            'value': 60.2,
+            'unit': '%',
+            'roomId': 'test-room',
+            'ts': int(datetime.now().timestamp() * 1000)
+        },
+        {
+            'deviceId': 'co2-test-1',
+            'kind': 'co2',
+            'value': 450,
+            'unit': 'ppm',
+            'roomId': 'test-room',
+            'ts': int(datetime.now().timestamp() * 1000)
+        },
+        {
+            'deviceId': 'light-test-1',
+            'kind': 'light',
+            'value': 800,
+            'unit': 'lux',
+            'roomId': 'test-room',
+            'ts': int(datetime.now().timestamp() * 1000)
+        },
+        {
+            'deviceId': 'solar-test-1',
+            'kind': 'solar',
+            'value': 120.5,
+            'unit': 'W',
+            'powerW': 120.5,
+            'voltage': 24.0,
+            'current': 5.02,
+            'on_status': True,
+            'roomId': 'test-room',
+            'ts': int(datetime.now().timestamp() * 1000)
+        }
     ]
     
-    print("\nTesting individual sensor endpoints:")
-    for endpoint in endpoints:
-        try:
-            response = requests.get(f"{base_url}{endpoint}")
-            if response.status_code == 200:
-                data = response.json()
-                count = data.get('count', 0)
-                sensor_type = data.get('sensor_type', endpoint.split('/')[-1])
-                print(f"  {sensor_type}: {count} records")
-            else:
-                print(f"  {endpoint}: ERROR {response.status_code}")
-        except Exception as e:
-            print(f"  {endpoint}: ERROR - {e}")
-    
-    print("\nTesting room endpoint:")
-    try:
-        response = requests.get(f"{base_url}/api/room/room1")
-        if response.status_code == 200:
-            data = response.json()
-            room_data = data.get('data', {})
-            print(f"  Room1 data:")
-            for sensor_type, sensor_data in room_data.items():
-                if sensor_data:
-                    print(f"    {sensor_type}: {sensor_data}")
-                else:
-                    print(f"    {sensor_type}: No data")
+    for data in test_data:
+        success = db_manager.save_sensor_data(data)
+        if success:
+            print(f"   ✅ Saved {data['kind']} data for {data['deviceId']}")
         else:
-            print(f"  Room endpoint: ERROR {response.status_code}")
-    except Exception as e:
-        print(f"  Room endpoint: ERROR - {e}")
+            print(f"   ❌ Failed to save {data['kind']} data for {data['deviceId']}")
     
-    print("\nTesting stats endpoint:")
-    try:
-        response = requests.get(f"{base_url}/api/stats")
-        if response.status_code == 200:
-            data = response.json()
-            stats = data.get('stats', {})
-            print(f"  Total records: {stats.get('total_records', 0)}")
-            print(f"  Sensor counts: {stats.get('sensor_counts', {})}")
-            print(f"  Tables: {stats.get('tables', [])}")
+    # Test retrieving data from specific tables
+    print("\n4. Testing data retrieval from specific tables...")
+    
+    sensor_types = ['temperature', 'humidity', 'co2', 'light', 'solar']
+    for sensor_type in sensor_types:
+        data = db_manager.get_recent_data(kind=sensor_type, limit=5)
+        print(f"   {sensor_type}: {len(data)} recent records")
+        if data:
+            latest = data[0]
+            print(f"      Latest: {latest.device_id} = {latest.value} {latest.unit}")
+    
+    # Test retrieving data from all tables
+    print("\n5. Testing data retrieval from all tables...")
+    all_data = db_manager.get_recent_data(limit=10)
+    print(f"   Total recent records from all tables: {len(all_data)}")
+    
+    # Test room data retrieval
+    print("\n6. Testing room data retrieval...")
+    room_data = db_manager.get_room_data('test-room', limit=10)
+    print(f"   Records for test-room: {len(room_data)}")
+    
+    # Final statistics
+    print("\n7. Final table statistics...")
+    final_stats = db_manager.get_table_statistics()
+    for table_name, stat in final_stats.items():
+        if 'error' in stat:
+            print(f"   {table_name}: ❌ {stat['error']}")
         else:
-            print(f"  Stats endpoint: ERROR {response.status_code}")
-    except Exception as e:
-        print(f"  Stats endpoint: ERROR - {e}")
+            print(f"   {table_name}: {stat['count']} records")
     
-    print("\nTesting health endpoint:")
-    try:
-        response = requests.get(f"{base_url}/api/health")
-        if response.status_code == 200:
-            data = response.json()
-            print(f"  Status: {data.get('status', 'unknown')}")
-            print(f"  Database: {data.get('database', 'unknown')}")
-            print(f"  Tables: {data.get('tables', 'unknown')}")
-        else:
-            print(f"  Health endpoint: ERROR {response.status_code}")
-    except Exception as e:
-        print(f"  Health endpoint: ERROR - {e}")
+    print("\n" + "=" * 60)
+    print("✅ Separate tables test completed!")
+    print("=" * 60)
     
-    print("\n" + "="*50)
-    print("SUCCESS: All endpoints are working with separate tables!")
-    print("="*50)
+    return True
 
 if __name__ == "__main__":
     test_separate_tables()
