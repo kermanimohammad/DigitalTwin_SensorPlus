@@ -1,0 +1,23 @@
+# Requirements for Live Sensor Dashboard and API
+# Real-time sensor data without database dependency
+
+# Core Flask
+Flask==2.3.3
+Flask-SocketIO==5.3.6
+Flask-CORS==4.0.0
+
+# MQTT
+paho-mqtt==1.6.1
+
+# WebSocket support
+python-socketio==5.8.0
+eventlet==0.33.3
+
+# JSON handling
+jsonschema==4.19.0
+
+# Date/time utilities
+python-dateutil==2.8.2
+
+# Optional: For better performance
+gunicorn==21.2.0
