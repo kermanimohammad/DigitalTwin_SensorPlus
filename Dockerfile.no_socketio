@@ -1,0 +1,23 @@
+# Dockerfile without SocketIO for Render.com
+# Simple Flask app without WebSocket complexity
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY render_requirements_ultra_simple.txt ./
+RUN pip install --upgrade pip && pip install -r render_requirements_ultra_simple.txt
+
+# Copy the no-socketio application file
+COPY render_dashboard_no_socketio.py ./
+
+# Expose port
+EXPOSE 10000
+
+# Set environment variables
+ENV PORT=10000
+ENV PYTHONUNBUFFERED=1
+
+# Run the application
+CMD ["python", "render_dashboard_no_socketio.py"]
