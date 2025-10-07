@@ -217,10 +217,10 @@ class RealisticSimulator:
                 # Generate other sensor data with realistic variations
                 temp = round(self.current_temps[room_id], 1)
                 
-                # Humidity: inversely related to temperature
-                base_humidity = 60 - (temp - 20) * 2  # Base humidity decreases with temperature
-                humidity = round(base_humidity + random.uniform(-5, 5), 1)
-                humidity = max(20, min(80, humidity))
+                # Humidity: realistic indoor room humidity (30-60%)
+                base_humidity = 45 - (temp - 22) * 1.5  # Base humidity around 45%
+                humidity = round(base_humidity + random.uniform(-0.6, 0.6), 1)
+                humidity = max(30, min(60, humidity))
                 
                 # CO2: slightly higher when temperature is higher (more activity)
                 base_co2 = 400 + (temp - 20) * 10
