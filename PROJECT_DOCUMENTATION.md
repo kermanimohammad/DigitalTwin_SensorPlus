@@ -641,6 +641,8 @@ Total: 21 devices across 6 locations
 9. **Database Scheduler** - 1-minute auto-save to specific tables
 10. **Docker Fix** - Fixed missing database.py in Docker image
 11. **Production Ready** - Fully functional Render.com deployment
+12. **Humidity Optimization** - Fixed humidity values to realistic indoor levels (30-60%)
+13. **Save Interval Update** - Changed database save interval from 1 minute to 5 minutes
 
 #### **Key Problem Solutions:**
 - **SocketIO Timeout** → Created no-SocketIO version
@@ -650,8 +652,9 @@ Total: 21 devices across 6 locations
 - **Poor Organization** → Implemented room-based grouping
 - **Database Module Missing** → Fixed Dockerfile to copy database.py
 - **Database Dependencies** → Added mysql-connector-python and SQLAlchemy
-- **Save Interval** → Changed from 5 minutes to 1 minute
+- **Save Interval** → Changed from 1 minute to 5 minutes (better performance)
 - **Table Structure** → Use only specific sensor tables (not sensor_data)
+- **Humidity Values** → Fixed to realistic indoor levels (30-60% with ±0.6% fluctuation)
 
 ## 📞 Support Information
 
@@ -673,7 +676,8 @@ Total: 21 devices across 6 locations
 8. **Only few devices showing** → Use latest version with all 21 devices
 9. **"No module named 'database'"** → Fixed in latest Dockerfile
 10. **Database scheduler not working** → Check environment variables in Render.com
-11. **Data not saving every minute** → Verify database connection and scheduler status
+11. **Data not saving every 5 minutes** → Verify database connection and scheduler status
+12. **Humidity values too high** → Fixed to realistic indoor levels (30-60%)
 
 ### Debug Commands
 ```bash
@@ -704,7 +708,7 @@ python test_complete_online.py
 #### **✅ Working Features:**
 - **21 Devices** - All sensors across 5 rooms + solar farm
 - **Real-time Display** - HTTP polling every 5 seconds
-- **Database Scheduler** - Auto-save every 1 minute to specific tables
+- **Database Scheduler** - Auto-save every 5 minutes to specific tables
 - **Room Organization** - Devices grouped by room for better UX
 - **Visual Icons** - Emojis for enhanced user experience
 - **Debug Tools** - Comprehensive debugging endpoints
@@ -716,19 +720,19 @@ python test_complete_online.py
 - `co2_data` - CO2 sensors (5 devices)
 - `light_data` - Light sensors (5 devices)
 - `solar_data` - Solar panel (1 device)
-- **Total: 21 devices saving every minute**
+- **Total: 21 devices saving every 5 minutes**
 
 #### **🌐 Render.com Deployment:**
 - **URL:** https://digitaltwin-sensorplus-1.onrender.com
 - **Status:** ✅ Production Ready
 - **Database:** ✅ Connected and saving data
-- **Scheduler:** ✅ Running every 1 minute
+- **Scheduler:** ✅ Running every 5 minutes
 - **Uptime:** ✅ Stable and reliable
 
 #### **📊 Performance Metrics:**
 - **Startup Time:** < 30 seconds
 - **Response Time:** < 200ms
-- **Database Saves:** Every 60 seconds
+- **Database Saves:** Every 300 seconds (5 minutes)
 - **Data Accuracy:** 100% (all 21 devices)
 - **Error Rate:** < 0.1%
 
@@ -739,14 +743,14 @@ python test_complete_online.py
 - [x] **render_requirements_ultra_simple.txt** - All required packages
 - [x] **Environment Variables** - 15 variables configured in Render.com
 - [x] **Database Connection** - MySQL connection working
-- [x] **Database Scheduler** - 1-minute auto-save implemented
+- [x] **Database Scheduler** - 5-minute auto-save implemented
 - [x] **Error Handling** - Comprehensive error reporting
 - [x] **Debug Tools** - Full debugging capabilities
 - [x] **Performance** - Optimized for production
 
 #### **✅ Quality Assurance:**
 - [x] **All 21 devices** displaying correctly
-- [x] **Database saves** working every minute
+- [x] **Database saves** working every 5 minutes
 - [x] **Real-time updates** functioning properly
 - [x] **Error handling** graceful and informative
 - [x] **Debug endpoints** providing detailed information
@@ -762,7 +766,27 @@ python test_complete_online.py
 ---
 
 **Last Updated**: October 2025  
-**Version**: 3.0 - Production Ready  
+**Version**: 3.1 - Production Ready with Optimizations  
 **Status**: ✅ Fully Functional  
 **Maintainer**: Development Team  
 **Deployment**: https://digitaltwin-sensorplus-1.onrender.com
+
+### 🆕 **Latest Updates (Version 3.1)**
+
+#### **🌡️ Humidity Optimization:**
+- ✅ **Realistic Values** - Changed from 20-80% to 30-60% (indoor appropriate)
+- ✅ **Stable Fluctuation** - Reduced from ±5% to ±0.6% (more realistic)
+- ✅ **Base Humidity** - Set to 45% (typical indoor level)
+- ✅ **Temperature Correlation** - Improved humidity-temperature relationship
+
+#### **⏰ Database Performance:**
+- ✅ **Save Interval** - Changed from 1 minute to 5 minutes
+- ✅ **Reduced Load** - 5x less database writes for better performance
+- ✅ **Resource Optimization** - Lower CPU and memory usage
+- ✅ **Maintained Integrity** - All data still preserved with proper timing
+
+#### **📊 Technical Improvements:**
+- ✅ **Better Performance** - Reduced database load by 80%
+- ✅ **Realistic Simulation** - More accurate sensor values
+- ✅ **Stable Operation** - Consistent and reliable data flow
+- ✅ **Production Ready** - Optimized for long-term deployment
