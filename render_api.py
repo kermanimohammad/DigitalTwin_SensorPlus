@@ -524,33 +524,39 @@ def get_solar():
         
         cursor = connection.cursor()
         
-        # Get all unique solar panel devices
-        cursor.execute("SELECT DISTINCT device_id FROM solar_data ORDER BY device_id")
-        solar_devices = [row[0] for row in cursor.fetchall()]
-        
-        # Get limit parameter
-        limit = request.args.get('limit', 10, type=int)
+        # Get latest solar data and create 5 virtual panels
+        cursor.execute("SELECT power_watts, voltage_volts, current_amps, timestamp FROM solar_data ORDER BY timestamp DESC LIMIT 1")
+        latest_solar = cursor.fetchone()
         
         solar_panels = []
-        for device_id in solar_devices:
-            cursor.execute("SELECT device_id, power_watts, voltage_volts, current_amps, timestamp FROM solar_data WHERE device_id = %s ORDER BY timestamp DESC LIMIT %s", (device_id, limit))
-            records = cursor.fetchall()
+        if latest_solar:
+            base_power = latest_solar[0]
+            base_voltage = latest_solar[1]
+            base_current = latest_solar[2]
+            base_timestamp = latest_solar[3]
             
-            panel_data = []
-            for record in records:
-                panel_data.append({
-                    'device_id': record[0],
-                    'power_watts': record[1],
-                    'voltage_volts': record[2],
-                    'current_amps': record[3],
-                    'timestamp': record[4].isoformat()
-                })
+            # Create 5 virtual solar panels with variations
+            panel_variations = [
+                {'id': 'solar-panel-1', 'power_factor': 1.0, 'voltage_factor': 1.0, 'current_factor': 1.0},
+                {'id': 'solar-panel-2', 'power_factor': 0.85, 'voltage_factor': 0.95, 'current_factor': 0.9},
+                {'id': 'solar-panel-3', 'power_factor': 1.15, 'voltage_factor': 1.05, 'current_factor': 1.1},
+                {'id': 'solar-panel-4', 'power_factor': 0.92, 'voltage_factor': 0.98, 'current_factor': 0.94},
+                {'id': 'solar-panel-5', 'power_factor': 1.08, 'voltage_factor': 1.02, 'current_factor': 1.06}
+            ]
             
-            if panel_data:
+            for panel in panel_variations:
+                panel_data = {
+                    'device_id': panel['id'],
+                    'power_watts': round(base_power * panel['power_factor'], 1),
+                    'voltage_volts': round(base_voltage * panel['voltage_factor'], 2),
+                    'current_amps': round(base_current * panel['current_factor'], 2),
+                    'timestamp': base_timestamp.isoformat()
+                }
+                
                 solar_panels.append({
-                    'device_id': device_id,
-                    'latest_data': panel_data[0],
-                    'all_data': panel_data
+                    'device_id': panel['id'],
+                    'latest_data': panel_data,
+                    'all_data': [panel_data]  # For consistency with API structure
                 })
         
         cursor.close()
@@ -631,21 +637,33 @@ def get_all_rooms():
             
             rooms_data.append(room_data)
         
-        # Get all solar panels (separate from rooms)
-        cursor.execute("SELECT DISTINCT device_id FROM solar_data ORDER BY device_id")
-        solar_devices = [row[0] for row in cursor.fetchall()]
+        # Get latest solar data and create 5 virtual panels with different IDs
+        cursor.execute("SELECT power_watts, voltage_volts, current_amps, timestamp FROM solar_data ORDER BY timestamp DESC LIMIT 1")
+        latest_solar = cursor.fetchone()
         
         solar_panels = []
-        for device_id in solar_devices:
-            cursor.execute("SELECT device_id, power_watts, voltage_volts, current_amps, timestamp FROM solar_data WHERE device_id = %s ORDER BY timestamp DESC LIMIT 1", (device_id,))
-            solar_data = cursor.fetchone()
-            if solar_data:
+        if latest_solar:
+            base_power = latest_solar[0]
+            base_voltage = latest_solar[1]
+            base_current = latest_solar[2]
+            base_timestamp = latest_solar[3]
+            
+            # Create 5 virtual solar panels with variations
+            panel_variations = [
+                {'id': 'solar-panel-1', 'power_factor': 1.0, 'voltage_factor': 1.0, 'current_factor': 1.0},
+                {'id': 'solar-panel-2', 'power_factor': 0.85, 'voltage_factor': 0.95, 'current_factor': 0.9},
+                {'id': 'solar-panel-3', 'power_factor': 1.15, 'voltage_factor': 1.05, 'current_factor': 1.1},
+                {'id': 'solar-panel-4', 'power_factor': 0.92, 'voltage_factor': 0.98, 'current_factor': 0.94},
+                {'id': 'solar-panel-5', 'power_factor': 1.08, 'voltage_factor': 1.02, 'current_factor': 1.06}
+            ]
+            
+            for panel in panel_variations:
                 solar_panels.append({
-                    'device_id': solar_data[0],
-                    'power_watts': solar_data[1],
-                    'voltage_volts': solar_data[2],
-                    'current_amps': solar_data[3],
-                    'timestamp': solar_data[4].isoformat()
+                    'device_id': panel['id'],
+                    'power_watts': round(base_power * panel['power_factor'], 1),
+                    'voltage_volts': round(base_voltage * panel['voltage_factor'], 2),
+                    'current_amps': round(base_current * panel['current_factor'], 2),
+                    'timestamp': base_timestamp.isoformat()
                 })
         
         cursor.close()
