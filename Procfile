@@ -1,1 +1,1 @@
-web: gunicorn render_api:app
+web: python render_dashboard.py

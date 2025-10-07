@@ -1,12 +1,12 @@
 services:
   - type: web
-    name: digitaltwin-api
-    env: docker
-    dockerfilePath: ./Dockerfile.render
+    name: digitaltwin-sensor-dashboard
+    env: python
     plan: free
+    buildCommand: pip install -r render_requirements.txt
+    startCommand: python render_dashboard.py
     envVars:
+      - key: SECRET_KEY
+        generateValue: true
       - key: PORT
-        value: "10000"
-      - key: PYTHONUNBUFFERED
-        value: "1"
-    healthCheckPath: /api/health
+        value: 10000
