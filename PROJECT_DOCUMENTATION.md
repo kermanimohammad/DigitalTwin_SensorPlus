@@ -41,10 +41,29 @@ Sensors → MQTT Broker → MQTT Subscriber → Database
 - `live_sensor_api.py` - Live data API endpoints
 - `mqtt_subscriber_hybrid.py` - Hybrid MQTT subscriber (DB + real-time)
 
+### Production Dashboard Files
+
+- `final_working_dashboard.py` - Production-ready dashboard with WebSocket
+- `render_dashboard_no_socketio.py` - **Render.com compatible dashboard (RECOMMENDED)**
+- `render_dashboard_fixed.py` - Fixed version with environment variables
+- `render_dashboard_minimal.py` - Minimal version for troubleshooting
+- `render_dashboard_ultra_simple.py` - Ultra simple version
+
+### Render.com Deployment Files
+
+- `Dockerfile.no_socketio` - **Main Dockerfile for Render.com (RECOMMENDED)**
+- `Dockerfile.render` - Alternative Dockerfile with health checks
+- `Dockerfile.simple` - Simple Dockerfile
+- `Dockerfile.minimal` - Minimal Dockerfile
+- `render_requirements.txt` - Python dependencies for Render.com
+- `render_requirements_minimal.txt` - Minimal dependencies
+- `render_requirements_ultra_simple.txt` - Ultra simple dependencies
+- `render.yaml` - Render.com Blueprint configuration
+- `Procfile` - Process definition for Render.com
+
 ### Testing & Development Files
 
 - `simple_dashboard.py` - Simple dashboard for testing
-- `final_working_dashboard.py` - Production-ready dashboard
 - `test_*.py` - Various test scripts
 - `simple_mqtt_*.py` - Simple MQTT components for testing
 
@@ -422,28 +441,140 @@ python test_working_system.py
 - Deployment guides
 - Troubleshooting guides
 
+## 🌐 Render.com Deployment
+
+### 🎯 **RECOMMENDED: No-SocketIO Version**
+
+The **`render_dashboard_no_socketio.py`** is the recommended version for Render.com deployment as it avoids SocketIO startup timeout issues.
+
+#### **Key Features:**
+- ✅ **21 Devices** - All sensors across 5 rooms + solar farm
+- ✅ **No SocketIO** - Uses simple HTTP polling instead
+- ✅ **Fast Startup** - No WebSocket complexity
+- ✅ **Room Grouping** - Devices organized by room
+- ✅ **Real-time Updates** - Every 5 seconds via HTTP
+- ✅ **Visual Icons** - Emojis for better UX
+
+#### **Device Configuration:**
+```
+Room 1-5: Each with 4 sensors
+├── 🌡️ Temperature (temp-1 to temp-5)
+├── 💧 Humidity (hum-1 to hum-5)  
+├── 🌬️ CO2 (co2-1 to co2-5)
+└── 💡 Light (light-1 to light-5)
+
+Solar Farm: 1 device
+└── ☀️ Solar Panel (solar-plant)
+
+Total: 21 devices
+```
+
+#### **Deployment Files:**
+- **Main App:** `render_dashboard_no_socketio.py`
+- **Dockerfile:** `Dockerfile.no_socketio`
+- **Requirements:** `render_requirements_ultra_simple.txt`
+- **Process:** `Procfile`
+
+#### **Environment Variables:**
+```bash
+PORT=10000
+SECRET_KEY=your-secret-key
+SIMULATOR_INTERVAL=5
+SIMULATOR_DEVICES=21
+DASHBOARD_TITLE=DigitalTwin Sensor Dashboard
+LOG_LEVEL=INFO
+```
+
+### 🐳 **Docker Deployment Options**
+
+#### **Option 1: No-SocketIO (Recommended)**
+```bash
+# Use this for Render.com
+docker build -f Dockerfile.no_socketio -t digitaltwin-dashboard .
+docker run -p 10000:10000 digitaltwin-dashboard
+```
+
+#### **Option 2: With Health Checks**
+```bash
+# Alternative with health monitoring
+docker build -f Dockerfile.render -t digitaltwin-dashboard-health .
+docker run -p 10000:10000 digitaltwin-dashboard-health
+```
+
+#### **Option 3: Minimal Version**
+```bash
+# For troubleshooting
+docker build -f Dockerfile.minimal -t digitaltwin-dashboard-minimal .
+docker run -p 10000:10000 digitaltwin-dashboard-minimal
+```
+
+### 🔧 **Deployment Troubleshooting**
+
+#### **Common Issues & Solutions:**
+
+1. **SocketIO Timeout (15 minutes)**
+   - **Problem:** Flask-SocketIO takes too long to start
+   - **Solution:** Use `render_dashboard_no_socketio.py`
+
+2. **Environment Variable Errors**
+   - **Problem:** `AttributeError: 'bool' object has no attribute 'lower'`
+   - **Solution:** Use simplified environment handling
+
+3. **Startup Hanging**
+   - **Problem:** Application stuck in "in progress"
+   - **Solution:** Remove health checks and complex dependencies
+
+4. **Port Configuration**
+   - **Problem:** Wrong port binding
+   - **Solution:** Use `PORT=10000` environment variable
+
+### 📊 **Dashboard Features**
+
+#### **Real-time Display:**
+- **Room Cards:** Each room shows all 4 sensors
+- **Auto-refresh:** Every 5 seconds
+- **Status Indicators:** Running/Stopped simulator
+- **Uptime Counter:** System uptime display
+- **Device Count:** Total connected devices
+
+#### **API Endpoints:**
+- `GET /` - Main dashboard
+- `GET /api/data` - JSON data for all devices
+- `POST /api/toggle-simulator` - Start/stop simulator
+- `GET /health` - Health check endpoint
+
 ## 🚀 Deployment Checklist
 
 ### Pre-deployment
 - [ ] All tests passing
 - [ ] Environment variables configured
-- [ ] Database schema updated
+- [ ] Database schema updated (if using database)
 - [ ] Dependencies installed
 - [ ] Security review completed
+- [ ] **Choose correct dashboard version (no-socketio recommended)**
+
+### Render.com Deployment
+- [ ] **Use `render_dashboard_no_socketio.py`**
+- [ ] **Use `Dockerfile.no_socketio`**
+- [ ] **Set PORT=10000 environment variable**
+- [ ] **Configure other environment variables**
+- [ ] **Test locally with Docker first**
 
 ### Deployment
-- [ ] Database connection tested
-- [ ] MQTT broker accessible
+- [ ] Database connection tested (if applicable)
+- [ ] MQTT broker accessible (if applicable)
 - [ ] Web services responding
-- [ ] WebSocket connections working
+- [ ] **HTTP polling working (no WebSocket needed)**
 - [ ] API endpoints functional
+- [ ] **All 21 devices displaying**
 
 ### Post-deployment
 - [ ] Monitor system performance
 - [ ] Check error logs
 - [ ] Verify data flow
 - [ ] Test user interfaces
-- [ ] Backup procedures in place
+- [ ] **Verify all 21 devices are showing**
+- [ ] **Test simulator start/stop functionality**
 
 ## 🔄 Maintenance
 
@@ -461,20 +592,78 @@ python test_working_system.py
 - Web service availability
 - Error rate monitoring
 
+## 📈 **Recent Updates & Improvements**
+
+### 🎯 **Latest Version: All 21 Devices Dashboard**
+
+#### **What's New:**
+- ✅ **Complete Device Coverage** - All 21 devices now displayed
+- ✅ **Room-based Organization** - Devices grouped by room for better UX
+- ✅ **Visual Enhancements** - Emojis and improved styling
+- ✅ **Render.com Compatibility** - No-SocketIO version for reliable deployment
+- ✅ **Simplified Architecture** - HTTP polling instead of WebSockets
+
+#### **Device Layout:**
+```
+ROOM1 (4 devices)     ROOM2 (4 devices)     ROOM3 (4 devices)
+├── temp-1            ├── temp-2            ├── temp-3
+├── hum-1             ├── hum-2             ├── hum-3
+├── co2-1             ├── co2-2             ├── co2-3
+└── light-1           └── light-2           └── light-3
+
+ROOM4 (4 devices)     ROOM5 (4 devices)     SOLAR-FARM (1 device)
+├── temp-4            ├── temp-5            └── solar-plant
+├── hum-4             ├── hum-5
+├── co2-4             ├── co2-5
+└── light-4           └── light-5
+
+Total: 21 devices across 6 locations
+```
+
+#### **Technical Improvements:**
+- **No SocketIO Dependencies** - Eliminates startup timeout issues
+- **HTTP Polling** - Simple, reliable real-time updates
+- **Room Grouping** - Better data organization
+- **Visual Icons** - Enhanced user experience
+- **Responsive Design** - Works on all devices
+
+### 🔧 **Deployment History**
+
+#### **Version Evolution:**
+1. **Initial Dashboard** - Basic WebSocket implementation
+2. **Persian Localization** - Full Persian language support
+3. **English Reversion** - Reverted to English as requested
+4. **Separate Tables** - Database restructure for sensor types
+5. **Render.com Preparation** - Multiple deployment versions
+6. **SocketIO Issues** - Identified and resolved timeout problems
+7. **No-SocketIO Solution** - Final working version for Render.com
+8. **All Devices Support** - Complete 21-device implementation
+
+#### **Key Problem Solutions:**
+- **SocketIO Timeout** → Created no-SocketIO version
+- **Environment Variables** → Fixed bool type handling
+- **Startup Hanging** → Removed complex dependencies
+- **Limited Devices** → Expanded to all 21 devices
+- **Poor Organization** → Implemented room-based grouping
+
 ## 📞 Support Information
 
 ### Logs Location
 - Application logs: Console output
-- Database logs: MySQL error log
-- MQTT logs: Broker logs
+- Database logs: MySQL error log (if using database)
+- MQTT logs: Broker logs (if using MQTT)
 - Web server logs: Flask debug output
+- **Render.com logs: Available in Render dashboard**
 
 ### Common Issues
 1. **Database connection failed** → Check credentials and network
 2. **MQTT connection failed** → Check broker availability
-3. **WebSocket not working** → Check CORS and firewall settings
+3. **WebSocket not working** → Use no-SocketIO version instead
 4. **Data not saving** → Check database permissions
-5. **Dashboard not updating** → Check WebSocket connection
+5. **Dashboard not updating** → Check HTTP polling (no WebSocket needed)
+6. **Render.com timeout** → Use `render_dashboard_no_socketio.py`
+7. **Environment variable errors** → Use simplified environment handling
+8. **Only few devices showing** → Use latest version with all 21 devices
 
 ### Debug Commands
 ```bash
