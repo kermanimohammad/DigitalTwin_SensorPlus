@@ -1,0 +1,74 @@
+# Render.com Environment Variables
+# Copy these to your Render.com service environment variables
+
+# ===========================================
+# REQUIRED VARIABLES (Must be set)
+# ===========================================
+
+# Server Configuration
+PORT=10000
+PYTHONUNBUFFERED=1
+FLASK_ENV=production
+FLASK_DEBUG=False
+
+# Security
+SECRET_KEY=digitaltwin-sensor-render-secret-key-2024
+
+# ===========================================
+# OPTIONAL VARIABLES (Can be customized)
+# ===========================================
+
+# Simulator Configuration
+SIMULATOR_INTERVAL=5
+SIMULATOR_ENABLED=true
+SIMULATOR_DEVICES=21
+
+# Dashboard Configuration
+DASHBOARD_TITLE=DigitalTwin Sensor Dashboard
+DASHBOARD_REFRESH_INTERVAL=10000
+DASHBOARD_AUTO_REFRESH=true
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_FORMAT=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+
+# Performance Configuration
+SOCKETIO_ASYNC_MODE=eventlet
+SOCKETIO_CORS_ALLOWED_ORIGINS=*
+
+# ===========================================
+# DATABASE VARIABLES (Optional - for future use)
+# ===========================================
+
+# Database Configuration (if you want to add database later)
+# DB_HOST=your-database-host
+# DB_NAME=your-database-name
+# DB_USER=your-database-user
+# DB_PASSWORD=your-database-password
+# DB_PORT=3306
+# DB_CHARSET=utf8mb4
+
+# ===========================================
+# MQTT VARIABLES (Optional - for external MQTT)
+# ===========================================
+
+# MQTT Configuration (if you want to connect to external MQTT broker)
+# MQTT_BROKER_HOST=your-mqtt-broker.com
+# MQTT_BROKER_PORT=1883
+# MQTT_USERNAME=your-mqtt-username
+# MQTT_PASSWORD=your-mqtt-password
+# MQTT_TOPIC_PREFIX=sensors/
+
+# ===========================================
+# RENDER.COM SPECIFIC VARIABLES
+# ===========================================
+
+# Render.com automatically sets these, but you can override:
+# RENDER=true
+# RENDER_EXTERNAL_URL=https://your-app-name.onrender.com
+# RENDER_GIT_COMMIT=your-git-commit-hash
+# RENDER_GIT_BRANCH=main
+# RENDER_GIT_REPO_SLUG=your-repo-name
+# RENDER_SERVICE_ID=your-service-id
+# RENDER_SERVICE_NAME=your-service-name
+# RENDER_SERVICE_TYPE=web
