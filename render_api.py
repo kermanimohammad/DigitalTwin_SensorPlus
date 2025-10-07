@@ -631,9 +631,6 @@ def get_all_rooms():
             
             rooms_data.append(room_data)
         
-        cursor.close()
-        connection.close()
-        
         # Get all solar panels (separate from rooms)
         cursor.execute("SELECT DISTINCT device_id FROM solar_data ORDER BY device_id")
         solar_devices = [row[0] for row in cursor.fetchall()]
@@ -650,6 +647,9 @@ def get_all_rooms():
                     'current_amps': solar_data[3],
                     'timestamp': solar_data[4].isoformat()
                 })
+        
+        cursor.close()
+        connection.close()
         
         return jsonify({
             'success': True,
