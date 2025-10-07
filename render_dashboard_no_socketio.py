@@ -12,6 +12,16 @@ import threading
 from datetime import datetime
 from flask import Flask, render_template_string, jsonify
 
+# Database imports
+try:
+    from database import DatabaseManager
+    DATABASE_AVAILABLE = True
+    print("[Database] Database module imported successfully")
+except ImportError as e:
+    DATABASE_AVAILABLE = False
+    print(f"[Database] Database module not available: {e}")
+    print("[Database] Running in simulation mode only")
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'no-socketio-secret')
@@ -20,6 +30,16 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'no-socketio-secret')
 latest_data = {}
 start_time = time.time()
 simulator_running = True
+
+# Database manager
+db_manager = None
+if DATABASE_AVAILABLE:
+    try:
+        db_manager = DatabaseManager()
+        print("[Database] Database manager initialized successfully")
+    except Exception as e:
+        print(f"[Database] Failed to initialize database manager: {e}")
+        DATABASE_AVAILABLE = False
 
 class SimpleSimulator:
     """Simple simulator without SocketIO"""
@@ -103,8 +123,69 @@ class SimpleSimulator:
     def stop(self):
         self.running = False
 
-# Initialize simulator
+class DatabaseScheduler:
+    """Database scheduler to save data every 5 minutes"""
+    
+    def __init__(self):
+        self.running = False
+        self.interval = 300  # 5 minutes = 300 seconds
+        self.save_count = 0
+        self.error_count = 0
+        
+    def run(self):
+        """Run the database scheduler"""
+        self.running = True
+        print(f"[Database Scheduler] Started - saving data every {self.interval} seconds")
+        
+        while self.running:
+            try:
+                if DATABASE_AVAILABLE and db_manager and latest_data:
+                    # Save all current sensor data to database
+                    saved_devices = 0
+                    for key, data in latest_data.items():
+                        try:
+                            # Prepare data for database
+                            sensor_data = {
+                                'device_id': data['device_id'],
+                                'kind': data['kind'],
+                                'room_id': data.get('room_id', 'unknown'),
+                                'value': data['value'],
+                                'unit': data['unit'],
+                                'timestamp': datetime.now(),
+                                'raw_data': str(data)
+                            }
+                            
+                            # Save to appropriate table
+                            success = db_manager.save_sensor_data(sensor_data)
+                            if success:
+                                saved_devices += 1
+                            else:
+                                self.error_count += 1
+                                
+                        except Exception as e:
+                            print(f"[Database Scheduler] Error saving {key}: {e}")
+                            self.error_count += 1
+                    
+                    self.save_count += 1
+                    print(f"[Database Scheduler] Save #{self.save_count}: {saved_devices} devices saved to database")
+                    
+                else:
+                    print("[Database Scheduler] Database not available, skipping save")
+                    
+            except Exception as e:
+                print(f"[Database Scheduler] Error in save cycle: {e}")
+                self.error_count += 1
+            
+            # Wait for next save cycle
+            time.sleep(self.interval)
+    
+    def stop(self):
+        self.running = False
+        print(f"[Database Scheduler] Stopped - Total saves: {self.save_count}, Errors: {self.error_count}")
+
+# Initialize simulator and database scheduler
 simulator = SimpleSimulator()
+db_scheduler = DatabaseScheduler()
 
 # HTML Template
 NO_SOCKETIO_TEMPLATE = '''
@@ -138,12 +219,15 @@ NO_SOCKETIO_TEMPLATE = '''
             <strong>Status:</strong> <span style="color: green;">Running</span><br>
             <strong>Uptime:</strong> <span id="uptime">00:00</span><br>
             <strong>Last Update:</strong> <span id="lastUpdate">Never</span><br>
-            <strong>Devices:</strong> <span id="deviceCount">0</span>
+            <strong>Devices:</strong> <span id="deviceCount">0</span><br>
+            <strong>Database:</strong> <span id="dbStatus">Checking...</span><br>
+            <strong>DB Saves:</strong> <span id="dbSaves">0</span> | <strong>DB Errors:</strong> <span id="dbErrors">0</span>
         </div>
         
         <div class="controls">
             <button class="btn" onclick="refreshData()">Refresh Data</button>
             <button class="btn" onclick="toggleSimulator()">Toggle Simulator</button>
+            <button class="btn" onclick="testDatabase()">Test Database</button>
         </div>
         
         <div class="sensor-grid" id="sensorGrid">
@@ -169,6 +253,28 @@ NO_SOCKETIO_TEMPLATE = '''
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                });
+            
+            // Update database status
+            fetch('/api/database-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('dbStatus').textContent = 'Connected';
+                        document.getElementById('dbStatus').style.color = 'green';
+                        document.getElementById('dbSaves').textContent = data.total_saves;
+                        document.getElementById('dbErrors').textContent = data.total_errors;
+                    } else {
+                        document.getElementById('dbStatus').textContent = 'Not Available';
+                        document.getElementById('dbStatus').style.color = 'red';
+                        document.getElementById('dbSaves').textContent = '0';
+                        document.getElementById('dbErrors').textContent = '0';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('dbStatus').textContent = 'Error';
+                    document.getElementById('dbStatus').style.color = 'red';
+                    console.error('Database status error:', error);
                 });
         }
         
@@ -247,6 +353,30 @@ NO_SOCKETIO_TEMPLATE = '''
                 });
         }
         
+        function testDatabase() {
+            fetch('/api/database-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        var message = '✅ Database is working correctly!\\n\\n';
+                        message += 'Scheduler Running: ' + (data.scheduler_running ? 'Yes' : 'No') + '\\n';
+                        message += 'Total Saves: ' + data.total_saves + '\\n';
+                        message += 'Total Errors: ' + data.total_errors + '\\n\\n';
+                        message += 'Table Statistics:\\n';
+                        for (var table in data.table_statistics) {
+                            var stats = data.table_statistics[table];
+                            message += '• ' + table + ': ' + stats.count + ' records\\n';
+                        }
+                        alert(message);
+                    } else {
+                        alert('❌ Database problem: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('❌ Database test error: ' + error.message);
+                });
+        }
+        
         // Update uptime
         setInterval(function() {
             var uptime = Math.floor((Date.now() - startTime) / 1000);
@@ -305,19 +435,57 @@ def health():
         'status': 'healthy',
         'uptime': int(time.time() - start_time),
         'timestamp': datetime.now().isoformat(),
-        'simulator_running': simulator.running
+        'simulator_running': simulator.running,
+        'database_available': DATABASE_AVAILABLE,
+        'db_saves': db_scheduler.save_count if 'db_scheduler' in globals() else 0,
+        'db_errors': db_scheduler.error_count if 'db_scheduler' in globals() else 0
     })
 
+@app.route('/api/database-status')
+def database_status():
+    """Get database status and statistics"""
+    if not DATABASE_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'error': 'Database not available',
+            'database_available': False
+        })
+    
+    try:
+        # Get database statistics
+        stats = db_manager.get_table_statistics()
+        return jsonify({
+            'success': True,
+            'database_available': True,
+            'scheduler_running': db_scheduler.running if 'db_scheduler' in globals() else False,
+            'total_saves': db_scheduler.save_count if 'db_scheduler' in globals() else 0,
+            'total_errors': db_scheduler.error_count if 'db_scheduler' in globals() else 0,
+            'table_statistics': stats
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'database_available': True
+        })
+
 def start_simulator():
-    """Start the simulator"""
+    """Start the simulator and database scheduler"""
     global start_time
     start_time = time.time()
     
     # Start simulator in background thread
     simulator_thread = threading.Thread(target=simulator.run, daemon=True)
     simulator_thread.start()
-    
     print("[System] Simple simulator started")
+    
+    # Start database scheduler in background thread
+    if DATABASE_AVAILABLE:
+        db_scheduler_thread = threading.Thread(target=db_scheduler.run, daemon=True)
+        db_scheduler_thread.start()
+        print("[System] Database scheduler started - saving data every 5 minutes")
+    else:
+        print("[System] Database scheduler not started - database not available")
 
 if __name__ == '__main__':
     print("=" * 60)
