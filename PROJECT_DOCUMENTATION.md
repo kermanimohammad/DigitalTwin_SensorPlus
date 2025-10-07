@@ -4,6 +4,8 @@
 
 **DigitalTwin SensorPlus** is a comprehensive IoT sensor monitoring system that combines real-time data visualization with database persistence. The system receives sensor data via MQTT protocol, stores it in a MySQL database, and provides real-time dashboards and REST APIs for data access.
 
+**هیچ گزینه و اطلاعاتی در صفحات برنامه به فارسی نباشد و همه چیز به انگلیسی باشد
+
 ## 🏗️ System Architecture
 
 ### Core Components
@@ -57,27 +59,7 @@ Sensors → MQTT Broker → MQTT Subscriber → Database
 
 ### Database Schema
 
-#### Main Table: `sensor_data`
-```sql
-CREATE TABLE sensor_data (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    device_id VARCHAR(50) NOT NULL,
-    kind VARCHAR(20) NOT NULL,  -- temperature, humidity, co2, light, solar
-    room_id VARCHAR(20),
-    value FLOAT,
-    unit VARCHAR(10),
-    power_w FLOAT,
-    voltage FLOAT,
-    current FLOAT,
-    on_status BOOLEAN,
-    timestamp DATETIME NOT NULL,
-    raw_data TEXT,
-    INDEX(device_id),
-    INDEX(kind),
-    INDEX(room_id),
-    INDEX(timestamp)
-);
-```
+### MySQL
 
 #### Separate Tables (Alternative Schema)
 - `temperature_data` - Temperature sensor data
@@ -285,12 +267,6 @@ FLASK_ENV=development
 FLASK_DEBUG=True
 SECRET_KEY=your_secret_key
 
-# Feature Flags
-USE_SQLITE=false  # Use SQLite instead of MySQL
-ENABLE_WEBSOCKET=true
-ENABLE_DATABASE=true
-```
-
 ### Database Configuration
 
 #### MySQL (Production)
@@ -306,10 +282,6 @@ DB_CONFIG = {
 }
 ```
 
-#### SQLite (Development)
-```python
-connection_string = "sqlite:///sensor_data.db"
-```
 
 ## 🧪 Testing
 
