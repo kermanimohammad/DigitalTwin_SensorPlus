@@ -1,0 +1,98 @@
+version: "3.9"
+
+services:
+  # MQTT Broker
+  broker:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/passwd:/mosquitto/config/passwd
+      - mosq_data:/mosquitto/data
+      - mosq_log:/mosquitto/log
+
+  # Hybrid MQTT Subscriber (saves to DB + provides live data)
+  hybrid-subscriber:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hybrid-subscriber
+    restart: unless-stopped
+    environment:
+      MQTT_BROKER: broker
+      MQTT_PORT: 1883
+      TOPICS: building/demo/#
+      QOS: 0
+    depends_on:
+      - broker
+    command: python mqtt_subscriber_hybrid.py
+
+  # Hybrid Dashboard (Real-time + Database)
+  hybrid-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hybrid-dashboard
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      MQTT_BROKER: broker
+      MQTT_PORT: 1883
+    depends_on:
+      - hybrid-subscriber
+    command: python hybrid_dashboard.py
+
+  # Hybrid API (Real-time + Database)
+  hybrid-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hybrid-api
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      MQTT_BROKER: broker
+      MQTT_PORT: 1883
+    depends_on:
+      - hybrid-subscriber
+    command: python hybrid_sensor_api.py
+
+  # MQTT Simulator (for testing)
+  mqtt-sim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mqtt-sim-hybrid
+    restart: unless-stopped
+    environment:
+      BROKER: broker
+      PORT: 1883
+      PREFIX: building/demo
+      QOS: 0
+      INTERVAL: 5  # Send data every 5 seconds
+    depends_on:
+      - broker
+    command: python mqtt_simulator.py
+
+  # Test script (optional)
+  test-hybrid:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: test-hybrid
+    depends_on:
+      - hybrid-dashboard
+      - hybrid-api
+      - mqtt-sim
+    command: sleep 15 && python test_hybrid_system.py
+    profiles:
+      - test
+
+volumes:
+  mosq_data:
+  mosq_log:
