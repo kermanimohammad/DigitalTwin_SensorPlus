@@ -124,18 +124,18 @@ class SimpleSimulator:
         self.running = False
 
 class DatabaseScheduler:
-    """Database scheduler to save data every 5 minutes"""
+    """Database scheduler to save data every 1 minute to specific sensor tables"""
     
     def __init__(self):
         self.running = False
-        self.interval = 300  # 5 minutes = 300 seconds
+        self.interval = 60  # 1 minute = 60 seconds
         self.save_count = 0
         self.error_count = 0
         
     def run(self):
         """Run the database scheduler"""
         self.running = True
-        print(f"[Database Scheduler] Started - saving data every {self.interval} seconds")
+        print(f"[Database Scheduler] Started - saving data every {self.interval} seconds (1 minute)")
         
         while self.running:
             try:
@@ -144,18 +144,29 @@ class DatabaseScheduler:
                     saved_devices = 0
                     for key, data in latest_data.items():
                         try:
-                            # Prepare data for database
+                            # Prepare data for database with correct field names
                             sensor_data = {
-                                'device_id': data['device_id'],
+                                'deviceId': data['device_id'],  # Use deviceId (not device_id)
                                 'kind': data['kind'],
-                                'room_id': data.get('room_id', 'unknown'),
+                                'roomId': data.get('room_id', 'unknown'),  # Use roomId (not room_id)
                                 'value': data['value'],
                                 'unit': data['unit'],
-                                'timestamp': datetime.now(),
+                                'ts': int(datetime.now().timestamp() * 1000),  # Use timestamp in milliseconds
                                 'raw_data': str(data)
                             }
                             
-                            # Save to appropriate table
+                            # Add specific fields for different sensor types
+                            if data['kind'] == 'light':
+                                # For light sensors, we need is_on and power_watts
+                                sensor_data['on'] = data['value'] > 500  # Assume light is on if > 500 lux
+                                sensor_data['powerW'] = data['value'] * 0.1  # Convert lux to watts (approximate)
+                            elif data['kind'] == 'solar':
+                                # For solar sensors, we need power, voltage, current
+                                sensor_data['powerW'] = data['value']
+                                sensor_data['voltage'] = 12.0  # Assume 12V system
+                                sensor_data['current'] = data['value'] / 12.0  # Calculate current
+                            
+                            # Save to appropriate table (only specific tables, not sensor_data)
                             success = db_manager.save_sensor_data(sensor_data)
                             if success:
                                 saved_devices += 1
@@ -167,7 +178,7 @@ class DatabaseScheduler:
                             self.error_count += 1
                     
                     self.save_count += 1
-                    print(f"[Database Scheduler] Save #{self.save_count}: {saved_devices} devices saved to database")
+                    print(f"[Database Scheduler] Save #{self.save_count}: {saved_devices} devices saved to specific sensor tables")
                     
                 else:
                     print("[Database Scheduler] Database not available, skipping save")
@@ -212,7 +223,7 @@ NO_SOCKETIO_TEMPLATE = '''
     <div class="container">
         <div class="header">
             <h1>DigitalTwin Sensor Dashboard</h1>
-            <p>All 21 devices across 5 rooms + Solar Farm</p>
+            <p>All 21 devices across 5 rooms + Solar Farm | Auto-save every 1 minute</p>
         </div>
         
         <div class="status">
@@ -483,7 +494,7 @@ def start_simulator():
     if DATABASE_AVAILABLE:
         db_scheduler_thread = threading.Thread(target=db_scheduler.run, daemon=True)
         db_scheduler_thread.start()
-        print("[System] Database scheduler started - saving data every 5 minutes")
+        print("[System] Database scheduler started - saving data every 1 minute to specific tables")
     else:
         print("[System] Database scheduler not started - database not available")
 
