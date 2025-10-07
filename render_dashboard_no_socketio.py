@@ -21,6 +21,10 @@ except ImportError as e:
     DATABASE_AVAILABLE = False
     print(f"[Database] Database module not available: {e}")
     print("[Database] Running in simulation mode only")
+except Exception as e:
+    DATABASE_AVAILABLE = False
+    print(f"[Database] Unexpected error importing database: {e}")
+    print("[Database] Running in simulation mode only")
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -35,11 +39,23 @@ simulator_running = True
 db_manager = None
 if DATABASE_AVAILABLE:
     try:
+        print("[Database] Initializing database manager...")
         db_manager = DatabaseManager()
         print("[Database] Database manager initialized successfully")
+        
+        # Test database connection
+        print("[Database] Testing database connection...")
+        session = db_manager.get_session()
+        session.close()
+        print("[Database] Database connection test successful")
+        
     except Exception as e:
         print(f"[Database] Failed to initialize database manager: {e}")
+        print(f"[Database] Error type: {type(e).__name__}")
+        import traceback
+        print(f"[Database] Traceback: {traceback.format_exc()}")
         DATABASE_AVAILABLE = False
+        db_manager = None
 
 class SimpleSimulator:
     """Simple simulator without SocketIO"""
@@ -239,6 +255,7 @@ NO_SOCKETIO_TEMPLATE = '''
             <button class="btn" onclick="refreshData()">Refresh Data</button>
             <button class="btn" onclick="toggleSimulator()">Toggle Simulator</button>
             <button class="btn" onclick="testDatabase()">Test Database</button>
+            <button class="btn" onclick="debugDatabase()">Debug Database</button>
         </div>
         
         <div class="sensor-grid" id="sensorGrid">
@@ -388,6 +405,43 @@ NO_SOCKETIO_TEMPLATE = '''
                 });
         }
         
+        function debugDatabase() {
+            fetch('/api/debug-database')
+                .then(response => response.json())
+                .then(data => {
+                    var message = '🔍 Database Debug Information\\n\\n';
+                    message += 'Timestamp: ' + data.timestamp + '\\n';
+                    message += 'Database Available: ' + (data.database_available ? 'Yes' : 'No') + '\\n';
+                    message += 'DB Manager Available: ' + (data.db_manager_available ? 'Yes' : 'No') + '\\n\\n';
+                    
+                    message += 'Environment Variables:\\n';
+                    for (var env in data.environment_vars) {
+                        message += '• ' + env + ': ' + data.environment_vars[env] + '\\n';
+                    }
+                    
+                    if (data.connection_test) {
+                        message += '\\nConnection Test: ' + data.connection_test + '\\n';
+                    }
+                    
+                    if (data.error_type) {
+                        message += 'Error Type: ' + data.error_type + '\\n';
+                    }
+                    
+                    if (data.table_statistics) {
+                        message += '\\nTable Statistics:\\n';
+                        for (var table in data.table_statistics) {
+                            var stats = data.table_statistics[table];
+                            message += '• ' + table + ': ' + stats.count + ' records\\n';
+                        }
+                    }
+                    
+                    alert(message);
+                })
+                .catch(error => {
+                    alert('❌ Debug error: ' + error.message);
+                });
+        }
+        
         // Update uptime
         setInterval(function() {
             var uptime = Math.floor((Date.now() - startTime) / 1000);
@@ -458,8 +512,17 @@ def database_status():
     if not DATABASE_AVAILABLE:
         return jsonify({
             'success': False,
-            'error': 'Database not available',
-            'database_available': False
+            'error': 'Database not available - module import failed',
+            'database_available': False,
+            'db_manager': None
+        })
+    
+    if not db_manager:
+        return jsonify({
+            'success': False,
+            'error': 'Database manager not initialized',
+            'database_available': True,
+            'db_manager': None
         })
     
     try:
@@ -468,6 +531,7 @@ def database_status():
         return jsonify({
             'success': True,
             'database_available': True,
+            'db_manager': 'Available',
             'scheduler_running': db_scheduler.running if 'db_scheduler' in globals() else False,
             'total_saves': db_scheduler.save_count if 'db_scheduler' in globals() else 0,
             'total_errors': db_scheduler.error_count if 'db_scheduler' in globals() else 0,
@@ -477,8 +541,42 @@ def database_status():
         return jsonify({
             'success': False,
             'error': str(e),
-            'database_available': True
+            'database_available': True,
+            'db_manager': 'Available but error occurred'
         })
+
+@app.route('/api/debug-database')
+def debug_database():
+    """Debug database connection"""
+    debug_info = {
+        'timestamp': datetime.now().isoformat(),
+        'database_available': DATABASE_AVAILABLE,
+        'db_manager_available': db_manager is not None,
+        'environment_vars': {
+            'DB_HOST': os.getenv('DB_HOST', 'NOT_SET'),
+            'DB_NAME': os.getenv('DB_NAME', 'NOT_SET'),
+            'DB_USER': os.getenv('DB_USER', 'NOT_SET'),
+            'DB_PASSWORD': 'SET' if os.getenv('DB_PASSWORD') else 'NOT_SET',
+            'DB_PORT': os.getenv('DB_PORT', 'NOT_SET')
+        }
+    }
+    
+    if DATABASE_AVAILABLE and db_manager:
+        try:
+            # Test connection
+            session = db_manager.get_session()
+            session.close()
+            debug_info['connection_test'] = 'SUCCESS'
+            
+            # Get stats
+            stats = db_manager.get_table_statistics()
+            debug_info['table_statistics'] = stats
+            
+        except Exception as e:
+            debug_info['connection_test'] = f'FAILED: {str(e)}'
+            debug_info['error_type'] = type(e).__name__
+    
+    return jsonify(debug_info)
 
 def start_simulator():
     """Start the simulator and database scheduler"""
