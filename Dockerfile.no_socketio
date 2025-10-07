@@ -9,8 +9,9 @@ WORKDIR /app
 COPY render_requirements_ultra_simple.txt ./
 RUN pip install --upgrade pip && pip install -r render_requirements_ultra_simple.txt
 
-# Copy the no-socketio application file
+# Copy the no-socketio application file and database module
 COPY render_dashboard_no_socketio.py ./
+COPY database.py ./
 
 # Expose port
 EXPOSE 10000
