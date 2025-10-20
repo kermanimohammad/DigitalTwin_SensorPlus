@@ -1,0 +1,37 @@
+{
+  "version": "2025.0.1.13",
+  "build": "2025.01.09",
+  "name": "DigitalTwin SensorPlus Backend",
+  "description": "Complete backend API with dashboard and frontend integration",
+  "features": [
+    "Real-time sensor simulation (21 devices across 5 rooms + solar farm)",
+    "MySQL database integration with auto-save every 5 minutes",
+    "Complete REST API with CORS support",
+    "Dashboard with blue control buttons",
+    "Real-time data API (/api/data, /api/proxy/data)",
+    "Historical data API (/api/history/<sensor_type>/<device_id>)",
+    "Device management API",
+    "Health monitoring endpoints",
+    "Database status and debugging",
+    "Simulator control endpoints",
+    "Comprehensive error handling",
+    "Production-ready deployment",
+    "Fixed database connection for online version",
+    "Resolved API endpoint configuration issues",
+    "Enhanced CORS configuration for frontend compatibility"
+  ],
+  "api": {
+    "base_url": "https://digitaltwin-sensorplus-1.onrender.com",
+    "endpoints": [
+      "/api/data",
+      "/api/proxy/data",
+      "/api/health",
+      "/api/database-status",
+      "/api/debug-database",
+      "/api/devices",
+      "/api/devices/<device_id>",
+      "/api/history/<sensor_type>/<device_id>",
+      "/api/toggle-simulator"
+    ]
+  }
+}
