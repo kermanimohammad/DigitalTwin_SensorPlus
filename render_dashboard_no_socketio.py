@@ -42,11 +42,17 @@ CORS(app,
 # Additional CORS middleware for better compatibility
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    response.headers.add('Access-Control-Max-Age', '3600')
+    # Only add headers if they don't already exist (avoid duplicates)
+    if 'Access-Control-Allow-Origin' not in response.headers:
+        response.headers.add('Access-Control-Allow-Origin', '*')
+    if 'Access-Control-Allow-Headers' not in response.headers:
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+    if 'Access-Control-Allow-Methods' not in response.headers:
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    if 'Access-Control-Allow-Credentials' not in response.headers:
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+    if 'Access-Control-Max-Age' not in response.headers:
+        response.headers.add('Access-Control-Max-Age', '3600')
     return response
 
 # Handle preflight OPTIONS requests
@@ -54,11 +60,11 @@ def after_request(response):
 def handle_preflight():
     if request.method == "OPTIONS":
         response = make_response()
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization,X-Requested-With")
-        response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS")
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Max-Age', '3600')
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers['Access-Control-Allow-Headers'] = "Content-Type,Authorization,X-Requested-With"
+        response.headers['Access-Control-Allow-Methods'] = "GET,PUT,POST,DELETE,OPTIONS"
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Max-Age'] = '3600'
         return response
 
 # Global storage
