@@ -10,7 +10,7 @@ import time
 import random
 import threading
 from datetime import datetime
-from flask import Flask, render_template_string, jsonify
+from flask import Flask, render_template_string, jsonify, request
 
 # Database imports
 try:
@@ -29,6 +29,10 @@ except Exception as e:
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'no-socketio-secret')
+
+# Enable CORS for frontend compatibility
+from flask_cors import CORS
+CORS(app, origins=['*'], methods=['GET', 'POST', 'OPTIONS'], allow_headers=['Content-Type'])
 
 # Global storage
 latest_data = {}
@@ -630,6 +634,20 @@ def api_data():
         'simulator_running': simulator.running
     })
 
+@app.route('/api/proxy/data')
+def api_proxy_data():
+    """Proxy endpoint for frontend compatibility"""
+    return jsonify({
+        'success': True,
+        'devices': latest_data,
+        'total_devices': len(latest_data),
+        'timestamp': datetime.now().isoformat(),
+        'uptime': int(time.time() - start_time),
+        'simulator_running': simulator.running,
+        'db_saves': db_scheduler.save_count if 'db_scheduler' in globals() else 0,
+        'db_fails': db_scheduler.error_count if 'db_scheduler' in globals() else 0
+    })
+
 @app.route('/api/toggle-simulator', methods=['POST'])
 def toggle_simulator():
     """Toggle simulator on/off"""
@@ -658,6 +676,18 @@ def health():
         'database_available': DATABASE_AVAILABLE,
         'db_saves': db_scheduler.save_count if 'db_scheduler' in globals() else 0,
         'db_errors': db_scheduler.error_count if 'db_scheduler' in globals() else 0
+    })
+
+@app.route('/api/health')
+def api_health():
+    """API health check endpoint for frontend"""
+    return jsonify({
+        'status': 'ok',
+        'database': 'connected' if DATABASE_AVAILABLE else 'disconnected',
+        'timestamp': datetime.now().isoformat(),
+        'uptime': int(time.time() - start_time),
+        'simulator_running': simulator.running,
+        'total_devices': len(latest_data)
     })
 
 @app.route('/api/database-status')
@@ -731,6 +761,88 @@ def debug_database():
             debug_info['error_type'] = type(e).__name__
     
     return jsonify(debug_info)
+
+@app.route('/api/devices')
+def api_devices():
+    """Get list of all available devices"""
+    devices = []
+    for device_id, device_data in latest_data.items():
+        devices.append({
+            'device_id': device_id,
+            'kind': device_data.get('kind'),
+            'room_id': device_data.get('room_id'),
+            'last_seen': device_data.get('timestamp')
+        })
+    
+    return jsonify({
+        'success': True,
+        'devices': devices,
+        'total_count': len(devices),
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/devices/<device_id>')
+def api_device_detail(device_id):
+    """Get detailed information for a specific device"""
+    if device_id in latest_data:
+        device_data = latest_data[device_id]
+        return jsonify({
+            'success': True,
+            'device': device_data,
+            'timestamp': datetime.now().isoformat()
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': 'Device not found',
+            'device_id': device_id
+        }), 404
+
+@app.route('/api/history/<sensor_type>/<device_id>')
+def api_sensor_history(sensor_type, device_id):
+    """Get historical data for a specific sensor"""
+    if not DATABASE_AVAILABLE or not db_manager:
+        return jsonify({
+            'success': False,
+            'error': 'Database not available'
+        }), 503
+    
+    try:
+        # Get hours parameter (default 24)
+        hours = int(request.args.get('hours', 24))
+        
+        # Get historical data from database
+        history_data = db_manager.get_recent_data(device_id=device_id, kind=sensor_type, limit=1000)
+        
+        # Format data for frontend
+        formatted_data = []
+        for record in history_data:
+            if hasattr(record, 'timestamp'):
+                formatted_data.append({
+                    'timestamp': record.timestamp.isoformat(),
+                    'value': getattr(record, f'{sensor_type}_c', None) or 
+                            getattr(record, f'{sensor_type}_percent', None) or
+                            getattr(record, f'{sensor_type}_ppm', None) or
+                            getattr(record, 'power_watts', None) or
+                            getattr(record, 'value', None),
+                    'device_id': record.device_id,
+                    'room_id': getattr(record, 'room_id', None)
+                })
+        
+        return jsonify({
+            'success': True,
+            'data': formatted_data,
+            'count': len(formatted_data),
+            'sensor_type': sensor_type,
+            'device_id': device_id,
+            'hours': hours
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Database query failed: {str(e)}'
+        }), 500
 
 def start_simulator():
     """Start the simulator and database scheduler"""

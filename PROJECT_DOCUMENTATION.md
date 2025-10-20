@@ -172,7 +172,7 @@ docker-compose -f docker-compose-live.yml up
 
 ### Production Deployment (Render)
 
-- **URL**: https://digitaltwin-sensorplus.onrender.com
+- **URL**: https://digitaltwin-sensorplus-1.onrender.com
 - **Environment**: Production
 - **Database**: MySQL (kbz.rew.mybluehost.me)
 - **MQTT**: External broker
