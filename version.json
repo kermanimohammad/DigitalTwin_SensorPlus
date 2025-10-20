@@ -1,5 +1,9 @@
 {
+<<<<<<< Updated upstream
   "version": "2025.0.1.13",
+=======
+  "version": "2025.0.1.11",
+>>>>>>> Stashed changes
   "build": "2025.01.09",
   "name": "DigitalTwin SensorPlus Backend",
   "description": "Complete backend API with dashboard and frontend integration",
@@ -8,22 +12,32 @@
     "MySQL database integration with auto-save every 5 minutes",
     "Complete REST API with CORS support",
     "Dashboard with blue control buttons",
+<<<<<<< Updated upstream
     "Real-time data API (/api/data, /api/proxy/data)",
     "Historical data API (/api/history/<sensor_type>/<device_id>)",
+=======
+    "Frontend integration endpoints",
+    "Historical data access",
+>>>>>>> Stashed changes
     "Device management API",
     "Health monitoring endpoints",
     "Database status and debugging",
     "Simulator control endpoints",
     "Comprehensive error handling",
+<<<<<<< Updated upstream
     "Production-ready deployment",
     "Fixed database connection for online version",
     "Resolved API endpoint configuration issues",
     "Enhanced CORS configuration for frontend compatibility"
+=======
+    "Production-ready deployment"
+>>>>>>> Stashed changes
   ],
   "api": {
     "base_url": "https://digitaltwin-sensorplus-1.onrender.com",
     "endpoints": [
       "/api/data",
+<<<<<<< Updated upstream
       "/api/proxy/data",
       "/api/health",
       "/api/database-status",
@@ -33,5 +47,35 @@
       "/api/history/<sensor_type>/<device_id>",
       "/api/toggle-simulator"
     ]
+=======
+      "/api/proxy/data", 
+      "/api/health",
+      "/api/devices",
+      "/api/devices/<device_id>",
+      "/api/history/<sensor_type>/<device_id>",
+      "/api/database-status",
+      "/api/debug-database",
+      "/api/toggle-simulator",
+      "/health"
+    ],
+    "cors_enabled": true,
+    "supported_methods": ["GET", "POST", "OPTIONS"]
+  },
+  "database": {
+    "type": "MySQL",
+    "auto_save_interval": "5 minutes",
+    "tables": [
+      "temperature_data",
+      "humidity_data", 
+      "co2_data",
+      "light_data",
+      "solar_data"
+    ]
+  },
+  "deployment": {
+    "platform": "Render.com",
+    "status": "production_ready",
+    "last_deploy": "2025.01.09"
+>>>>>>> Stashed changes
   }
 }
