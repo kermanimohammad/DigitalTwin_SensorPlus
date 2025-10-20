@@ -10,7 +10,7 @@ import time
 import random
 import threading
 from datetime import datetime
-from flask import Flask, render_template_string, jsonify
+from flask import Flask, render_template_string, jsonify, request
 
 # Database imports
 try:
@@ -29,6 +29,10 @@ except Exception as e:
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'no-socketio-secret')
+
+# Enable CORS for frontend compatibility
+from flask_cors import CORS
+CORS(app, origins=['*'], methods=['GET', 'POST', 'OPTIONS'], allow_headers=['Content-Type'])
 
 # Global storage
 latest_data = {}
@@ -384,9 +388,6 @@ NO_SOCKETIO_TEMPLATE = '''
         .sensor-value { font-size: 2em; color: #27ae60; margin: 10px 0; }
         .sensor-unit { color: #7f8c8d; }
         .status { background: #d4edda; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-        .controls { text-align: center; margin: 20px 0; }
-        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 0 10px; }
-        .btn:hover { background: #0056b3; }
     </style>
 </head>
 <body>
@@ -405,12 +406,6 @@ NO_SOCKETIO_TEMPLATE = '''
             <strong>DB Saves:</strong> <span id="dbSaves">0</span> | <strong>DB Errors:</strong> <span id="dbErrors">0</span>
         </div>
         
-        <div class="controls">
-            <button class="btn" onclick="refreshData()">Refresh Data</button>
-            <button class="btn" onclick="toggleSimulator()">Toggle Simulator</button>
-            <button class="btn" onclick="testDatabase()">Test Database</button>
-            <button class="btn" onclick="debugDatabase()">Debug Database</button>
-        </div>
         
         <div class="sensor-grid" id="sensorGrid">
             <div style="text-align: center; color: #666; padding: 40px;">
@@ -423,42 +418,6 @@ NO_SOCKETIO_TEMPLATE = '''
         var startTime = Date.now();
         var autoRefreshInterval;
         
-        function refreshData() {
-            fetch('/api/data')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        updateSensorGrid(data.devices);
-                        document.getElementById('lastUpdate').textContent = new Date(data.timestamp).toLocaleString();
-                        document.getElementById('deviceCount').textContent = Object.keys(data.devices).length;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-            
-            // Update database status
-            fetch('/api/database-status')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('dbStatus').textContent = 'Connected';
-                        document.getElementById('dbStatus').style.color = 'green';
-                        document.getElementById('dbSaves').textContent = data.total_saves;
-                        document.getElementById('dbErrors').textContent = data.total_errors;
-                    } else {
-                        document.getElementById('dbStatus').textContent = 'Not Available';
-                        document.getElementById('dbStatus').style.color = 'red';
-                        document.getElementById('dbSaves').textContent = '0';
-                        document.getElementById('dbErrors').textContent = '0';
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('dbStatus').textContent = 'Error';
-                    document.getElementById('dbStatus').style.color = 'red';
-                    console.error('Database status error:', error);
-                });
-        }
         
         function updateSensorGrid(devices) {
             var sensorGrid = document.getElementById('sensorGrid');
@@ -522,79 +481,8 @@ NO_SOCKETIO_TEMPLATE = '''
             });
         }
         
-        function toggleSimulator() {
-            fetch('/api/toggle-simulator', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Simulator ' + (data.running ? 'started' : 'stopped'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        }
         
-        function testDatabase() {
-            fetch('/api/database-status')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        var message = '✅ Database is working correctly!\\n\\n';
-                        message += 'Scheduler Running: ' + (data.scheduler_running ? 'Yes' : 'No') + '\\n';
-                        message += 'Total Saves: ' + data.total_saves + '\\n';
-                        message += 'Total Errors: ' + data.total_errors + '\\n\\n';
-                        message += 'Table Statistics:\\n';
-                        for (var table in data.table_statistics) {
-                            var stats = data.table_statistics[table];
-                            message += '• ' + table + ': ' + stats.count + ' records\\n';
-                        }
-                        alert(message);
-                    } else {
-                        alert('❌ Database problem: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    alert('❌ Database test error: ' + error.message);
-                });
-        }
         
-        function debugDatabase() {
-            fetch('/api/debug-database')
-                .then(response => response.json())
-                .then(data => {
-                    var message = '🔍 Database Debug Information\\n\\n';
-                    message += 'Timestamp: ' + data.timestamp + '\\n';
-                    message += 'Database Available: ' + (data.database_available ? 'Yes' : 'No') + '\\n';
-                    message += 'DB Manager Available: ' + (data.db_manager_available ? 'Yes' : 'No') + '\\n\\n';
-                    
-                    message += 'Environment Variables:\\n';
-                    for (var env in data.environment_vars) {
-                        message += '• ' + env + ': ' + data.environment_vars[env] + '\\n';
-                    }
-                    
-                    if (data.connection_test) {
-                        message += '\\nConnection Test: ' + data.connection_test + '\\n';
-                    }
-                    
-                    if (data.error_type) {
-                        message += 'Error Type: ' + data.error_type + '\\n';
-                    }
-                    
-                    if (data.table_statistics) {
-                        message += '\\nTable Statistics:\\n';
-                        for (var table in data.table_statistics) {
-                            var stats = data.table_statistics[table];
-                            message += '• ' + table + ': ' + stats.count + ' records\\n';
-                        }
-                    }
-                    
-                    alert(message);
-                })
-                .catch(error => {
-                    alert('❌ Debug error: ' + error.message);
-                });
-        }
         
         // Update uptime
         setInterval(function() {
@@ -606,10 +494,78 @@ NO_SOCKETIO_TEMPLATE = '''
         }, 1000);
         
         // Auto refresh every 5 seconds
-        autoRefreshInterval = setInterval(refreshData, 5000);
+        autoRefreshInterval = setInterval(function() {
+            fetch('/api/data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateSensorGrid(data.devices);
+                        document.getElementById('lastUpdate').textContent = new Date(data.timestamp).toLocaleString();
+                        document.getElementById('deviceCount').textContent = Object.keys(data.devices).length;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            
+            // Update database status
+            fetch('/api/database-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('dbStatus').textContent = 'Connected';
+                        document.getElementById('dbStatus').style.color = 'green';
+                        document.getElementById('dbSaves').textContent = data.total_saves;
+                        document.getElementById('dbErrors').textContent = data.total_errors;
+                    } else {
+                        document.getElementById('dbStatus').textContent = 'Not Available';
+                        document.getElementById('dbStatus').style.color = 'red';
+                        document.getElementById('dbSaves').textContent = '0';
+                        document.getElementById('dbErrors').textContent = '0';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('dbStatus').textContent = 'Error';
+                    document.getElementById('dbStatus').style.color = 'red';
+                    console.error('Database status error:', error);
+                });
+        }, 5000);
         
         // Initial load
-        refreshData();
+        fetch('/api/data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateSensorGrid(data.devices);
+                    document.getElementById('lastUpdate').textContent = new Date(data.timestamp).toLocaleString();
+                    document.getElementById('deviceCount').textContent = Object.keys(data.devices).length;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        
+        // Initial database status
+        fetch('/api/database-status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('dbStatus').textContent = 'Connected';
+                    document.getElementById('dbStatus').style.color = 'green';
+                    document.getElementById('dbSaves').textContent = data.total_saves;
+                    document.getElementById('dbErrors').textContent = data.total_errors;
+                } else {
+                    document.getElementById('dbStatus').textContent = 'Not Available';
+                    document.getElementById('dbStatus').style.color = 'red';
+                    document.getElementById('dbSaves').textContent = '0';
+                    document.getElementById('dbErrors').textContent = '0';
+                }
+            })
+            .catch(error => {
+                document.getElementById('dbStatus').textContent = 'Error';
+                document.getElementById('dbStatus').style.color = 'red';
+                console.error('Database status error:', error);
+            });
     </script>
 </body>
 </html>
@@ -628,6 +584,20 @@ def api_data():
         'timestamp': datetime.now().isoformat(),
         'uptime': int(time.time() - start_time),
         'simulator_running': simulator.running
+    })
+
+@app.route('/api/proxy/data')
+def api_proxy_data():
+    """Proxy endpoint for frontend compatibility"""
+    return jsonify({
+        'success': True,
+        'devices': latest_data,
+        'total_devices': len(latest_data),
+        'timestamp': datetime.now().isoformat(),
+        'uptime': int(time.time() - start_time),
+        'simulator_running': simulator.running,
+        'db_saves': db_scheduler.save_count if 'db_scheduler' in globals() else 0,
+        'db_fails': db_scheduler.error_count if 'db_scheduler' in globals() else 0
     })
 
 @app.route('/api/toggle-simulator', methods=['POST'])
@@ -658,6 +628,18 @@ def health():
         'database_available': DATABASE_AVAILABLE,
         'db_saves': db_scheduler.save_count if 'db_scheduler' in globals() else 0,
         'db_errors': db_scheduler.error_count if 'db_scheduler' in globals() else 0
+    })
+
+@app.route('/api/health')
+def api_health():
+    """API health check endpoint for frontend"""
+    return jsonify({
+        'status': 'ok',
+        'database': 'connected' if DATABASE_AVAILABLE else 'disconnected',
+        'timestamp': datetime.now().isoformat(),
+        'uptime': int(time.time() - start_time),
+        'simulator_running': simulator.running,
+        'total_devices': len(latest_data)
     })
 
 @app.route('/api/database-status')
@@ -731,6 +713,88 @@ def debug_database():
             debug_info['error_type'] = type(e).__name__
     
     return jsonify(debug_info)
+
+@app.route('/api/devices')
+def api_devices():
+    """Get list of all available devices"""
+    devices = []
+    for device_id, device_data in latest_data.items():
+        devices.append({
+            'device_id': device_id,
+            'kind': device_data.get('kind'),
+            'room_id': device_data.get('room_id'),
+            'last_seen': device_data.get('timestamp')
+        })
+    
+    return jsonify({
+        'success': True,
+        'devices': devices,
+        'total_count': len(devices),
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/devices/<device_id>')
+def api_device_detail(device_id):
+    """Get detailed information for a specific device"""
+    if device_id in latest_data:
+        device_data = latest_data[device_id]
+        return jsonify({
+            'success': True,
+            'device': device_data,
+            'timestamp': datetime.now().isoformat()
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': 'Device not found',
+            'device_id': device_id
+        }), 404
+
+@app.route('/api/history/<sensor_type>/<device_id>')
+def api_sensor_history(sensor_type, device_id):
+    """Get historical data for a specific sensor"""
+    if not DATABASE_AVAILABLE or not db_manager:
+        return jsonify({
+            'success': False,
+            'error': 'Database not available'
+        }), 503
+    
+    try:
+        # Get hours parameter (default 24)
+        hours = int(request.args.get('hours', 24))
+        
+        # Get historical data from database
+        history_data = db_manager.get_recent_data(device_id=device_id, kind=sensor_type, limit=1000)
+        
+        # Format data for frontend
+        formatted_data = []
+        for record in history_data:
+            if hasattr(record, 'timestamp'):
+                formatted_data.append({
+                    'timestamp': record.timestamp.isoformat(),
+                    'value': getattr(record, f'{sensor_type}_c', None) or 
+                            getattr(record, f'{sensor_type}_percent', None) or
+                            getattr(record, f'{sensor_type}_ppm', None) or
+                            getattr(record, 'power_watts', None) or
+                            getattr(record, 'value', None),
+                    'device_id': record.device_id,
+                    'room_id': getattr(record, 'room_id', None)
+                })
+        
+        return jsonify({
+            'success': True,
+            'data': formatted_data,
+            'count': len(formatted_data),
+            'sensor_type': sensor_type,
+            'device_id': device_id,
+            'hours': hours
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Database query failed: {str(e)}'
+        }), 500
 
 def start_simulator():
     """Start the simulator and database scheduler"""
