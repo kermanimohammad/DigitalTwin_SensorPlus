@@ -388,9 +388,6 @@ NO_SOCKETIO_TEMPLATE = '''
         .sensor-value { font-size: 2em; color: #27ae60; margin: 10px 0; }
         .sensor-unit { color: #7f8c8d; }
         .status { background: #d4edda; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-        .controls { text-align: center; margin: 20px 0; }
-        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 0 10px; }
-        .btn:hover { background: #0056b3; }
     </style>
 </head>
 <body>
@@ -409,12 +406,6 @@ NO_SOCKETIO_TEMPLATE = '''
             <strong>DB Saves:</strong> <span id="dbSaves">0</span> | <strong>DB Errors:</strong> <span id="dbErrors">0</span>
         </div>
         
-        <div class="controls">
-            <button class="btn" onclick="refreshData()">Refresh Data</button>
-            <button class="btn" onclick="toggleSimulator()">Toggle Simulator</button>
-            <button class="btn" onclick="testDatabase()">Test Database</button>
-            <button class="btn" onclick="debugDatabase()">Debug Database</button>
-        </div>
         
         <div class="sensor-grid" id="sensorGrid">
             <div style="text-align: center; color: #666; padding: 40px;">
@@ -427,42 +418,6 @@ NO_SOCKETIO_TEMPLATE = '''
         var startTime = Date.now();
         var autoRefreshInterval;
         
-        function refreshData() {
-            fetch('/api/data')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        updateSensorGrid(data.devices);
-                        document.getElementById('lastUpdate').textContent = new Date(data.timestamp).toLocaleString();
-                        document.getElementById('deviceCount').textContent = Object.keys(data.devices).length;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-            
-            // Update database status
-            fetch('/api/database-status')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('dbStatus').textContent = 'Connected';
-                        document.getElementById('dbStatus').style.color = 'green';
-                        document.getElementById('dbSaves').textContent = data.total_saves;
-                        document.getElementById('dbErrors').textContent = data.total_errors;
-                    } else {
-                        document.getElementById('dbStatus').textContent = 'Not Available';
-                        document.getElementById('dbStatus').style.color = 'red';
-                        document.getElementById('dbSaves').textContent = '0';
-                        document.getElementById('dbErrors').textContent = '0';
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('dbStatus').textContent = 'Error';
-                    document.getElementById('dbStatus').style.color = 'red';
-                    console.error('Database status error:', error);
-                });
-        }
         
         function updateSensorGrid(devices) {
             var sensorGrid = document.getElementById('sensorGrid');
@@ -526,79 +481,8 @@ NO_SOCKETIO_TEMPLATE = '''
             });
         }
         
-        function toggleSimulator() {
-            fetch('/api/toggle-simulator', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Simulator ' + (data.running ? 'started' : 'stopped'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        }
         
-        function testDatabase() {
-            fetch('/api/database-status')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        var message = '✅ Database is working correctly!\\n\\n';
-                        message += 'Scheduler Running: ' + (data.scheduler_running ? 'Yes' : 'No') + '\\n';
-                        message += 'Total Saves: ' + data.total_saves + '\\n';
-                        message += 'Total Errors: ' + data.total_errors + '\\n\\n';
-                        message += 'Table Statistics:\\n';
-                        for (var table in data.table_statistics) {
-                            var stats = data.table_statistics[table];
-                            message += '• ' + table + ': ' + stats.count + ' records\\n';
-                        }
-                        alert(message);
-                    } else {
-                        alert('❌ Database problem: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    alert('❌ Database test error: ' + error.message);
-                });
-        }
         
-        function debugDatabase() {
-            fetch('/api/debug-database')
-                .then(response => response.json())
-                .then(data => {
-                    var message = '🔍 Database Debug Information\\n\\n';
-                    message += 'Timestamp: ' + data.timestamp + '\\n';
-                    message += 'Database Available: ' + (data.database_available ? 'Yes' : 'No') + '\\n';
-                    message += 'DB Manager Available: ' + (data.db_manager_available ? 'Yes' : 'No') + '\\n\\n';
-                    
-                    message += 'Environment Variables:\\n';
-                    for (var env in data.environment_vars) {
-                        message += '• ' + env + ': ' + data.environment_vars[env] + '\\n';
-                    }
-                    
-                    if (data.connection_test) {
-                        message += '\\nConnection Test: ' + data.connection_test + '\\n';
-                    }
-                    
-                    if (data.error_type) {
-                        message += 'Error Type: ' + data.error_type + '\\n';
-                    }
-                    
-                    if (data.table_statistics) {
-                        message += '\\nTable Statistics:\\n';
-                        for (var table in data.table_statistics) {
-                            var stats = data.table_statistics[table];
-                            message += '• ' + table + ': ' + stats.count + ' records\\n';
-                        }
-                    }
-                    
-                    alert(message);
-                })
-                .catch(error => {
-                    alert('❌ Debug error: ' + error.message);
-                });
-        }
         
         // Update uptime
         setInterval(function() {
@@ -610,10 +494,78 @@ NO_SOCKETIO_TEMPLATE = '''
         }, 1000);
         
         // Auto refresh every 5 seconds
-        autoRefreshInterval = setInterval(refreshData, 5000);
+        autoRefreshInterval = setInterval(function() {
+            fetch('/api/data')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateSensorGrid(data.devices);
+                        document.getElementById('lastUpdate').textContent = new Date(data.timestamp).toLocaleString();
+                        document.getElementById('deviceCount').textContent = Object.keys(data.devices).length;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            
+            // Update database status
+            fetch('/api/database-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('dbStatus').textContent = 'Connected';
+                        document.getElementById('dbStatus').style.color = 'green';
+                        document.getElementById('dbSaves').textContent = data.total_saves;
+                        document.getElementById('dbErrors').textContent = data.total_errors;
+                    } else {
+                        document.getElementById('dbStatus').textContent = 'Not Available';
+                        document.getElementById('dbStatus').style.color = 'red';
+                        document.getElementById('dbSaves').textContent = '0';
+                        document.getElementById('dbErrors').textContent = '0';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('dbStatus').textContent = 'Error';
+                    document.getElementById('dbStatus').style.color = 'red';
+                    console.error('Database status error:', error);
+                });
+        }, 5000);
         
         // Initial load
-        refreshData();
+        fetch('/api/data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateSensorGrid(data.devices);
+                    document.getElementById('lastUpdate').textContent = new Date(data.timestamp).toLocaleString();
+                    document.getElementById('deviceCount').textContent = Object.keys(data.devices).length;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        
+        // Initial database status
+        fetch('/api/database-status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('dbStatus').textContent = 'Connected';
+                    document.getElementById('dbStatus').style.color = 'green';
+                    document.getElementById('dbSaves').textContent = data.total_saves;
+                    document.getElementById('dbErrors').textContent = data.total_errors;
+                } else {
+                    document.getElementById('dbStatus').textContent = 'Not Available';
+                    document.getElementById('dbStatus').style.color = 'red';
+                    document.getElementById('dbSaves').textContent = '0';
+                    document.getElementById('dbErrors').textContent = '0';
+                }
+            })
+            .catch(error => {
+                document.getElementById('dbStatus').textContent = 'Error';
+                document.getElementById('dbStatus').style.color = 'red';
+                console.error('Database status error:', error);
+            });
     </script>
 </body>
 </html>
